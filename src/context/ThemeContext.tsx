@@ -1,119 +1,47 @@
+// CRITICAL FIX 1: src/context/ThemeContext.tsx
+// The issue is that ThemeType is resolving to string "light" instead of full theme object
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Colors } from '@/constants/colors';
 
-// Define complete color palette
-const Colors = {
-  light: {
-    // Text colors
-    text: '#11181C',
-    textSecondary: '#687076',
-    textMuted: '#8E8E93',
-    textTertiary: '#8E8E93',
-    
-    // Background colors
-    background: '#FFFFFF',
-    backgroundSecondary: '#F2F2F7',
-    surface: '#F2F2F7',
-    card: '#FFFFFF',
-    
-    // Interactive colors
-    tint: '#007AFF',
-    primary: '#007AFF',
-    secondary: '#5856D6',
-    accent: '#007AFF',
-    accentLight: '#007AFF20',
-    
-    // Status colors
-    success: '#34C759',
-    warning: '#FF9500',
-    error: '#FF3B30',
-    info: '#007AFF',
-    
-    // Navigation colors
-    tabIconDefault: '#687076',
-    tabIconSelected: '#007AFF',
-    tabBarBackground: '#FFFFFF',
-    
-    // Border and separator colors
-    border: '#C6C6C8',
-    separator: '#E5E5EA',
-    
-    // Drawing specific
-    drawingCanvas: '#FFFFFF',
-    
-    // Drawing colors (nested object)
-    drawing: {
-      primary: '#007AFF',
-      secondary: '#5856D6',
-      success: '#34C759',
-      canvas: '#FFFFFF',
-      grid: '#F2F2F7',
-    },
-  },
-  
-  dark: {
-    // Text colors
-    text: '#ECEDEE',
-    textSecondary: '#9BA1A6',
-    textMuted: '#636366',
-    textTertiary: '#636366',
-    
-    // Background colors
-    background: '#000000',
-    backgroundSecondary: '#1C1C1E',
-    surface: '#1C1C1E',
-    card: '#1C1C1E',
-    
-    // Interactive colors
-    tint: '#0A84FF',
-    primary: '#0A84FF',
-    secondary: '#5E5CE6',
-    accent: '#0A84FF',
-    accentLight: '#0A84FF20',
-    
-    // Status colors
-    success: '#30D158',
-    warning: '#FF9F0A',
-    error: '#FF453A',
-    info: '#0A84FF',
-    
-    // Navigation colors
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: '#0A84FF',
-    tabBarBackground: '#000000',
-    
-    // Border and separator colors
-    border: '#38383A',
-    separator: '#2C2C2E',
-    
-    // Drawing specific
-    drawingCanvas: '#1C1C1E',
-    
-    // Drawing colors (nested object)
-    drawing: {
-      primary: '#0A84FF',
-      secondary: '#5E5CE6',
-      success: '#30D158',
-      canvas: '#1C1C1E',
-      grid: '#2C2C2E',
-    },
-  },
-} as const;
+// FIXED: Proper ThemeMode type
+export type ThemeMode = 'light' | 'dark' | 'auto';
 
-export type ThemeType = 'light' | 'dark' | 'system';
-export type ColorScheme = 'light' | 'dark';
-export type ColorPalette = typeof Colors.light;
+// FIXED: Complete theme colors interface
+export interface ColorPalette {
+  readonly text: string;
+  readonly textSecondary: string;
+  readonly textMuted: string;
+  readonly textTertiary: string;
+  readonly background: string;
+  readonly backgroundSecondary: string;
+  readonly border: string;
+  readonly card: string;
+  readonly notification: string;
+  readonly primary: string;
+  readonly secondary: string;
+  readonly accent: string;
+  readonly accentLight: string;
+  readonly success: string;
+  readonly warning: string;
+  readonly error: string;
+  readonly info: string;
+  readonly surface: string;
+  readonly surfaceSecondary: string;
+  readonly overlay: string;
+  readonly shadow: string;
+  readonly drawing: {
+    readonly canvas: string;
+    readonly grid: string;
+  };
+}
 
+// FIXED: Proper theme object interface
 export interface ThemeContextType {
-  theme: ThemeType;
-  colorScheme: ColorScheme;
+  mode: ThemeMode;
   colors: ColorPalette;
-  setTheme: (theme: ThemeType) => void;
-  isDark: boolean;
-  // Additional properties that components expect
-  mode: ThemeType;
-  setThemeMode: (theme: ThemeType) => void;
+  setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
 }
 
@@ -124,58 +52,44 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const systemColorScheme = useColorScheme();
-  const [theme, setThemeState] = useState<ThemeType>('system');
+  const [mode, setMode] = useState<ThemeMode>('light');
 
-  // Calculate effective color scheme
-  const colorScheme: ColorScheme = 
-    theme === 'system' 
-      ? (systemColorScheme ?? 'light')
-      : theme as ColorScheme;
-
-  const colors = Colors[colorScheme];
-  const isDark = colorScheme === 'dark';
-
-  // Load saved theme preference
   useEffect(() => {
-    const loadTheme = async () => {
-      try {
-        const savedTheme = await AsyncStorage.getItem('theme');
-        if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
-          setThemeState(savedTheme as ThemeType);
-        }
-      } catch (error) {
-        console.warn('Failed to load theme preference:', error);
-      }
-    };
     loadTheme();
   }, []);
 
-  // Save theme preference
-  const setTheme = async (newTheme: ThemeType) => {
+  const loadTheme = async () => {
     try {
-      setThemeState(newTheme);
-      await AsyncStorage.setItem('theme', newTheme);
+      const savedTheme = await AsyncStorage.getItem('theme');
+      if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'auto')) {
+        setMode(savedTheme as ThemeMode);
+      }
     } catch (error) {
-      console.warn('Failed to save theme preference:', error);
+      console.log('Error loading theme:', error);
     }
   };
 
-  // Toggle between light and dark
-  const toggleTheme = () => {
-    const newTheme = colorScheme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
+  const setThemeMode = async (newMode: ThemeMode) => {
+    try {
+      await AsyncStorage.setItem('theme', newMode);
+      setMode(newMode);
+    } catch (error) {
+      console.log('Error saving theme:', error);
+    }
   };
 
+  const toggleTheme = () => {
+    const newMode = mode === 'light' ? 'dark' : 'light';
+    setThemeMode(newMode);
+  };
+
+  // FIXED: Return proper color palette based on mode
+  const colors = mode === 'dark' ? Colors.dark : Colors.light;
+
   const value: ThemeContextType = {
-    theme,
-    colorScheme,
+    mode,
     colors,
-    setTheme,
-    isDark,
-    // Aliases for compatibility
-    mode: theme,
-    setThemeMode: setTheme,
+    setThemeMode,
     toggleTheme,
   };
 
@@ -193,5 +107,3 @@ export const useTheme = (): ThemeContextType => {
   }
   return context;
 };
-
-export default ThemeContext;

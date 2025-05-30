@@ -1,270 +1,236 @@
-/**
- * FIXED - UserProgress Context with ALL expected properties
- * Resolves all "Property does not exist" errors
- */
+// CRITICAL FIX 2: src/context/UserProgressContext.tsx
+// Adding all missing properties that are causing errors
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS, SKILL_LEVELS, SkillLevel } from '@/constants/app';
+import { APP_CONFIG } from '@/constants/app';
 
-// Complete user progress interface
+// FIXED: Complete UserProgress interface with all expected properties
 export interface UserProgress {
-  // Basic user info
-  currentSkillLevel: SkillLevel;
+  // Onboarding and Assessment
+  hasCompletedOnboarding: boolean;
+  hasCompletedAssessment: boolean;
+  skillLevel: 'beginner' | 'intermediate' | 'advanced';
   
-  // Statistics that components expect
-  stats: {
-    totalLessonsCompleted: number;
-    currentStreak: number;
-    totalShapesDrawn: number;
-    totalPracticeTime: number;
+  // Drawing Statistics
+  drawingsCompleted: number;
+  shapesDetected: number;
+  totalDrawingTime: number;
+  currentStreak: number;
+  longestStreak: number;
+  
+  // Learning Progress
+  lessonsCompleted: number;
+  currentLesson: number;
+  totalScore: number;
+  averageAccuracy: number;
+  
+  // Achievements and Progress
+  achievements: Achievement[];
+  badges: Badge[];
+  level: number;
+  experiencePoints: number;
+  
+  // App Usage
+  totalSessions: number;
+  lastSessionDate: string;
+  firstLaunchDate: string;
+  
+  // Settings and Preferences
+  preferredDifficulty: 'easy' | 'medium' | 'hard';
+  reminderSettings: {
+    enabled: boolean;
+    time: string;
+    frequency: 'daily' | 'weekly';
   };
   
-  // Achievement system
-  achievements: Array<{
-    id: string;
-    title: string;
-    description: string;
-    unlockedAt: number;
-    category: string;
-  }>;
+  // Subscription Status
+  subscription: {
+    isPremium: boolean;
+    plan: 'free' | 'premium' | 'pro';
+    expiresAt?: string;
+    features: string[];
+  };
   
-  // Subscription info
-  subscriptionTier: 'free' | 'premium' | 'pro';
-  subscriptionExpiresAt?: number;
-  
-  // Settings
-  hapticEnabled: boolean;
-  notificationsEnabled: boolean;
-  
-  // Progress tracking
-  lastActiveDate: number;
-  joinedDate: number;
-  totalSessionTime: number;
-  
-  // Weekly progress data
-  weeklyProgress: number[];
+  // Social Features
+  isProfilePublic: boolean;
+  allowDataCollection: boolean;
 }
 
-// Context interface with ALL expected methods
-export interface UserProgressContextType {
-  // State
+interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  unlocked: boolean;
+  unlockedAt?: string;
+  progress: number;
+  maxProgress: number;
+}
+
+interface Badge {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  earnedAt: string;
+}
+
+interface UserProgressContextType {
   progress: UserProgress;
+  updateProgress: (updates: Partial<UserProgress>) => void;
+  incrementDrawing: () => void;
+  incrementStreak: () => void;
+  resetStreak: () => void;
+  unlockAchievement: (achievementId: string) => void;
+  addBadge: (badge: Badge) => void;
+  updateSkillLevel: (level: 'beginner' | 'intermediate' | 'advanced') => void;
+  completeOnboarding: () => void;
+  completeAssessment: (skillLevel: 'beginner' | 'intermediate' | 'advanced') => void;
   isLoading: boolean;
-  
-  // Computed properties that components expect
-  skillLevel: SkillLevel;
-  streak: number;
-  totalLessonsCompleted: number;
-  totalPracticeTime: number;
-  weeklyProgress: number[];
-  
-  // Methods that components expect
-  updateProgress: (updates: Partial<UserProgress>) => Promise<void>;
-  updatePreferences: (preferences: Partial<UserProgress>) => Promise<void>;
-  updateSkillLevel: (level: SkillLevel) => Promise<void>;
-  
-  // Subscription methods
-  canAccessPremiumFeatures: () => boolean;
-  
-  // Achievement methods
-  unlockAchievement: (achievementId: string) => Promise<void>;
-  
-  // Progress tracking
-  incrementLessonCount: () => Promise<void>;
-  incrementPracticeTime: (minutes: number) => Promise<void>;
-  updateStreak: () => Promise<void>;
-  
-  // Data management
-  resetProgress: () => Promise<void>;
-  exportProgress: () => Promise<string>;
-  importProgress: (data: string) => Promise<void>;
 }
 
 const UserProgressContext = createContext<UserProgressContextType | undefined>(undefined);
-
-// Default progress for new users
-const getDefaultProgress = (): UserProgress => ({
-  currentSkillLevel: SKILL_LEVELS.BEGINNER,
-  stats: {
-    totalLessonsCompleted: 0,
-    currentStreak: 0,
-    totalShapesDrawn: 0,
-    totalPracticeTime: 0,
-  },
-  achievements: [],
-  subscriptionTier: 'free',
-  hapticEnabled: true,
-  notificationsEnabled: true,
-  lastActiveDate: Date.now(),
-  joinedDate: Date.now(),
-  totalSessionTime: 0,
-  weeklyProgress: [0, 0, 0, 0, 0, 0, 0], // 7 days
-});
 
 interface UserProgressProviderProps {
   children: ReactNode;
 }
 
+// Default progress state
+const defaultProgress: UserProgress = {
+  hasCompletedOnboarding: false,
+  hasCompletedAssessment: false,
+  skillLevel: 'beginner',
+  drawingsCompleted: 0,
+  shapesDetected: 0,
+  totalDrawingTime: 0,
+  currentStreak: 0,
+  longestStreak: 0,
+  lessonsCompleted: 0,
+  currentLesson: 1,
+  totalScore: 0,
+  averageAccuracy: 0,
+  achievements: [],
+  badges: [],
+  level: 1,
+  experiencePoints: 0,
+  totalSessions: 0,
+  lastSessionDate: new Date().toISOString(),
+  firstLaunchDate: new Date().toISOString(),
+  preferredDifficulty: 'easy',
+  reminderSettings: {
+    enabled: false,
+    time: '19:00',
+    frequency: 'daily'
+  },
+  subscription: {
+    isPremium: false,
+    plan: 'free',
+    features: []
+  },
+  isProfilePublic: false,
+  allowDataCollection: true
+};
+
 export const UserProgressProvider: React.FC<UserProgressProviderProps> = ({ children }) => {
-  const [progress, setProgress] = useState<UserProgress>(getDefaultProgress());
+  const [progress, setProgress] = useState<UserProgress>(defaultProgress);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load progress from storage
   useEffect(() => {
-    const loadProgress = async () => {
-      try {
-        const saved = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROGRESS);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setProgress({ ...getDefaultProgress(), ...parsed });
-        }
-      } catch (error) {
-        console.warn('Failed to load user progress:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     loadProgress();
   }, []);
 
-  // Save progress to storage
+  const loadProgress = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(APP_CONFIG.STORAGE_KEYS.USER_PROGRESS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setProgress({ ...defaultProgress, ...parsed });
+      }
+    } catch (error) {
+      console.log('Error loading progress:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const saveProgress = async (newProgress: UserProgress) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_PROGRESS, JSON.stringify(newProgress));
-      setProgress(newProgress);
+      await AsyncStorage.setItem(
+        APP_CONFIG.STORAGE_KEYS.USER_PROGRESS,
+        JSON.stringify(newProgress)
+      );
     } catch (error) {
-      console.warn('Failed to save user progress:', error);
+      console.log('Error saving progress:', error);
     }
   };
 
-  // Update progress
-  const updateProgress = async (updates: Partial<UserProgress>) => {
+  const updateProgress = (updates: Partial<UserProgress>) => {
     const newProgress = { ...progress, ...updates };
-    await saveProgress(newProgress);
+    setProgress(newProgress);
+    saveProgress(newProgress);
   };
 
-  // Update preferences
-  const updatePreferences = async (preferences: Partial<UserProgress>) => {
-    await updateProgress(preferences);
-  };
-
-  // Update skill level
-  const updateSkillLevel = async (level: SkillLevel) => {
-    await updateProgress({ currentSkillLevel: level });
-  };
-
-  // Check premium access
-  const canAccessPremiumFeatures = (): boolean => {
-    if (progress.subscriptionTier === 'free') return false;
-    if (progress.subscriptionExpiresAt && progress.subscriptionExpiresAt < Date.now()) {
-      return false;
-    }
-    return true;
-  };
-
-  // Unlock achievement
-  const unlockAchievement = async (achievementId: string) => {
-    if (progress.achievements.some(a => a.id === achievementId)) return;
-    
-    const newAchievement = {
-      id: achievementId,
-      title: `Achievement ${achievementId}`,
-      description: 'Well done!',
-      unlockedAt: Date.now(),
-      category: 'general',
-    };
-    
-    await updateProgress({
-      achievements: [...progress.achievements, newAchievement],
+  const incrementDrawing = () => {
+    updateProgress({
+      drawingsCompleted: progress.drawingsCompleted + 1,
+      experiencePoints: progress.experiencePoints + 10
     });
   };
 
-  // Increment lesson count
-  const incrementLessonCount = async () => {
-    await updateProgress({
-      stats: {
-        ...progress.stats,
-        totalLessonsCompleted: progress.stats.totalLessonsCompleted + 1,
-      },
+  const incrementStreak = () => {
+    const newStreak = progress.currentStreak + 1;
+    updateProgress({
+      currentStreak: newStreak,
+      longestStreak: Math.max(progress.longestStreak, newStreak)
     });
   };
 
-  // Increment practice time
-  const incrementPracticeTime = async (minutes: number) => {
-    await updateProgress({
-      stats: {
-        ...progress.stats,
-        totalPracticeTime: progress.stats.totalPracticeTime + minutes,
-      },
+  const resetStreak = () => {
+    updateProgress({ currentStreak: 0 });
+  };
+
+  const unlockAchievement = (achievementId: string) => {
+    const updatedAchievements = progress.achievements.map(achievement =>
+      achievement.id === achievementId
+        ? { ...achievement, unlocked: true, unlockedAt: new Date().toISOString() }
+        : achievement
+    );
+    updateProgress({ achievements: updatedAchievements });
+  };
+
+  const addBadge = (badge: Badge) => {
+    updateProgress({
+      badges: [...progress.badges, badge]
     });
   };
 
-  // Update streak
-  const updateStreak = async () => {
-    const today = new Date().toDateString();
-    const lastActive = new Date(progress.lastActiveDate).toDateString();
-    
-    if (today !== lastActive) {
-      const newStreak = today === new Date(progress.lastActiveDate + 86400000).toDateString()
-        ? progress.stats.currentStreak + 1
-        : 1;
-      
-      await updateProgress({
-        stats: {
-          ...progress.stats,
-          currentStreak: newStreak,
-        },
-        lastActiveDate: Date.now(),
-      });
-    }
+  const updateSkillLevel = (level: 'beginner' | 'intermediate' | 'advanced') => {
+    updateProgress({ skillLevel: level });
   };
 
-  // Reset progress
-  const resetProgress = async () => {
-    await saveProgress(getDefaultProgress());
+  const completeOnboarding = () => {
+    updateProgress({ hasCompletedOnboarding: true });
   };
 
-  // Export progress
-  const exportProgress = async (): Promise<string> => {
-    return JSON.stringify(progress);
-  };
-
-  // Import progress
-  const importProgress = async (data: string) => {
-    try {
-      const imported = JSON.parse(data);
-      await saveProgress({ ...getDefaultProgress(), ...imported });
-    } catch (error) {
-      console.warn('Failed to import progress:', error);
-    }
+  const completeAssessment = (skillLevel: 'beginner' | 'intermediate' | 'advanced') => {
+    updateProgress({
+      hasCompletedAssessment: true,
+      skillLevel
+    });
   };
 
   const value: UserProgressContextType = {
-    // State
     progress,
-    isLoading,
-    
-    // Computed properties
-    skillLevel: progress.currentSkillLevel,
-    streak: progress.stats.currentStreak,
-    totalLessonsCompleted: progress.stats.totalLessonsCompleted,
-    totalPracticeTime: progress.stats.totalPracticeTime,
-    weeklyProgress: progress.weeklyProgress,
-    
-    // Methods
     updateProgress,
-    updatePreferences,
-    updateSkillLevel,
-    canAccessPremiumFeatures,
+    incrementDrawing,
+    incrementStreak,
+    resetStreak,
     unlockAchievement,
-    incrementLessonCount,
-    incrementPracticeTime,
-    updateStreak,
-    resetProgress,
-    exportProgress,
-    importProgress,
+    addBadge,
+    updateSkillLevel,
+    completeOnboarding,
+    completeAssessment,
+    isLoading
   };
 
   return (
@@ -281,5 +247,3 @@ export const useUserProgress = (): UserProgressContextType => {
   }
   return context;
 };
-
-export default UserProgressContext;

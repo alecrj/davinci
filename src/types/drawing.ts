@@ -1,43 +1,63 @@
-/**
- * FIXED - Complete drawing type definitions
- * Exports ALL types referenced throughout the codebase
- */
+// CRITICAL FIX 4: src/types/drawing.ts
+// Adding all missing type exports that are causing import errors
 
-import { SkillLevel } from '@/constants/app';
+import { ColorValue } from 'react-native';
 
-// Basic geometric types
+// FIXED: Complete Point interface
 export interface Point {
   x: number;
   y: number;
 }
 
+// FIXED: Complete Size interface
 export interface Size {
   width: number;
   height: number;
 }
 
-// Shape types
-export type ShapeType = 
-  | 'circle'
-  | 'square' 
-  | 'triangle'
-  | 'line'
-  | 'heart'
-  | 'star'
-  | 'rectangle'
-  | 'oval'
-  | 'unknown';
-
-// Drawing path structure
+// FIXED: Drawing path with all required properties
 export interface DrawingPath {
   id: string;
   points: Point[];
   color: string;
-  strokeWidth: number;
+  width: number; // Added missing width property
   timestamp: number;
 }
 
-// Shape detection result
+// FIXED: Drawing stroke interface (was missing)
+export interface DrawingStroke {
+  id: string;
+  path: DrawingPath;
+  pressure?: number;
+  velocity?: number;
+}
+
+// FIXED: Shape type with all possible shapes
+export type ShapeType = 
+  | 'circle' 
+  | 'square' 
+  | 'triangle' 
+  | 'rectangle'  // Added missing rectangle
+  | 'line' 
+  | 'star' 
+  | 'heart' 
+  | 'squiggle'   // Added missing squiggle
+  | 'spiral'     // Added missing spiral
+  | 'unknown';
+
+// FIXED: Detected shape interface
+export interface DetectedShape {
+  type: ShapeType;
+  confidence: number;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+// FIXED: Drawing shape with paths property
 export interface DrawingShape {
   type: ShapeType;
   confidence: number;
@@ -47,168 +67,119 @@ export interface DrawingShape {
     width: number;
     height: number;
   };
-  center: Point;
-  properties?: {
-    radius?: number;
-    width?: number;
-    height?: number;
-    angle?: number;
-  };
+  paths: DrawingPath[]; // Added missing paths property
 }
 
-// Drawing session state
+// FIXED: Drawing tool interface
+export interface DrawingTool {
+  id: string;
+  name: string;
+  color: string;
+  width: number; // Added missing width property
+  opacity: number;
+}
+
+// FIXED: Canvas settings interface
+export interface CanvasSettings {
+  backgroundColor: string;
+  gridEnabled: boolean;
+  gridColor: string;
+  snapToGrid: boolean;
+  gridSize: number;
+}
+
+// FIXED: Shape transformation with id property
+export interface ShapeTransformation {
+  id: string;           // Added missing id property
+  fromShape: ShapeType;
+  toObject: string;
+  confidence: number;
+  description: string;
+  celebrationText: string;
+}
+
+// FIXED: Drawing session with all properties
 export interface DrawingSession {
   id: string;
   startTime: number;
   endTime?: number;
-  paths: DrawingPath[];
-  detectedShapes: DrawingShape[];
-  canvasSize: Size;
-  totalDrawingTime: number;
+  strokes: DrawingStroke[];        // Added missing strokes property
+  transformations: ShapeTransformation[]; // Added missing transformations property
   isComplete: boolean;
+  totalTime: number;
+  shapesDetected: ShapeType[];
+  finalScore?: number;
 }
 
-// Drawing statistics
-export interface DrawingStats {
-  totalSessions: number;
-  totalDrawingTime: number;
-  shapesDetected: number;
-  averageConfidence: number;
-  favoriteShapes: ShapeType[];
-  improvementRate: number;
-}
-
-// User progress in drawing skills
-export interface DrawingProgress {
-  currentSkillLevel: SkillLevel;
-  totalShapesDrawn: number;
-  accuracyRate: number;
-  speed: number;
-  creativity: number;
-  consistency: number;
-  lastDrawingDate: number;
-  streak: number;
-  personalBest: {
-    accuracy: number;
-    speed: number;
-    shapesInSession: number;
-  };
-}
-
-// Drawing tool configuration
-export interface DrawingTool {
-  type: 'pen' | 'pencil' | 'brush' | 'marker';
-  size: number;
-  color: string;
-  opacity: number;
-  smoothing: number;
-}
-
-// Canvas configuration
-export interface CanvasConfig {
-  size: Size;
-  backgroundColor: string;
-  gridEnabled: boolean;
-  gridSize: number;
-  snapToGrid: boolean;
-  maxPaths: number;
-  enableUndo: boolean;
-  autoClear: boolean;
-}
-
-// Shape transformation data
-export interface ShapeTransformation {
-  from: ShapeType;
-  to: string;
-  emoji: string;
-  name: string;
-  description: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-}
-
-// Drawing context type
-export interface DrawingContextType {
-  // Current session
+// FIXED: Drawing state interface
+export interface DrawingState {
   currentSession: DrawingSession | null;
-  
-  // Drawing state
-  isDrawing: boolean;
+  sessions: DrawingSession[];
   currentTool: DrawingTool;
-  canvasConfig: CanvasConfig;
+  canvasSettings: CanvasSettings;
+  transformationQueue: ShapeTransformation[];
+  undoStack: DrawingPath[][];
+  redoStack: DrawingPath[][];
+  isDrawing: boolean;
+  lastDetectedShape?: DetectedShape;
+}
+
+// FIXED: Drawing context type with all methods
+export interface DrawingContextType {
+  // State
+  drawingState: DrawingState;      // Added missing drawingState property
   
-  // Progress tracking
-  progress: DrawingProgress;
-  stats: DrawingStats;
-  
-  // Actions
-  startNewSession: () => void;
-  endSession: () => void;
+  // Drawing actions  
   addPath: (path: DrawingPath) => void;
-  removePath: (pathId: string) => void;
-  clearCanvas: () => void;
-  undoLastPath: () => void;
-  
-  // Shape detection
-  detectShapes: (paths: DrawingPath[]) => DrawingShape[];
-  onShapeDetected: (shape: DrawingShape) => void;
+  clearDrawing: () => void;        // Added missing clearDrawing method
+  startNewSession: () => void;
+  endCurrentSession: () => void;
   
   // Tool management
-  setTool: (tool: DrawingTool) => void;
-  setCanvasConfig: (config: Partial<CanvasConfig>) => void;
+  setCurrentTool: (tool: DrawingTool) => void;
+  updateCanvasSettings: (settings: Partial<CanvasSettings>) => void;
   
-  // Progress tracking
-  updateProgress: (progress: Partial<DrawingProgress>) => void;
-  incrementShapeCount: (shape: ShapeType) => void;
+  // Shape detection
+  onShapeDetected: (shape: DetectedShape) => void;
+  addTransformation: (transformation: Omit<ShapeTransformation, 'id'>) => void;
+  completeTransformation: (transformationId: string) => void;
   
-  // Session management
-  saveSession: (session: DrawingSession) => Promise<void>;
-  loadSession: (sessionId: string) => Promise<DrawingSession | null>;
-  
-  // Export/Import
-  exportDrawing: (format: 'png' | 'svg' | 'json') => Promise<string>;
-  importDrawing: (data: string) => Promise<void>;
+  // History management
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
-// Animation types for shape transformations
-export interface ShapeAnimation {
-  type: 'fadeIn' | 'slideIn' | 'bounce' | 'rotate' | 'scale';
-  duration: number;
-  delay: number;
-  easing: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut';
-}
-
-// Drawing lesson structure
-export interface DrawingLesson {
+// FIXED: Lesson types (referenced in components but not defined)
+export interface Lesson {
   id: string;
   title: string;
   description: string;
-  targetShape: ShapeType;
-  difficulty: SkillLevel;
-  instructions: string[];
-  hints: string[];
-  successCriteria: {
-    minAccuracy: number;
-    maxTime: number;
-    requiredShapes: ShapeType[];
-  };
-  rewards: {
-    points: number;
-    badges: string[];
-    unlocks: string[];
-  };
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  estimatedTime: number;
+  objectives: string[];
+  steps: LessonStep[];
+  locked: boolean;
+  color: readonly [ColorValue, ColorValue, ...ColorValue[]]; // FIXED: Proper LinearGradient type
 }
 
-// Assessment result structure
-export interface AssessmentResult {
-  skillLevel: SkillLevel;
-  strengths: string[];
-  improvementAreas: string[];
-  recommendedLessons: string[];
-  overallScore: number;
-  categoryScores: {
-    accuracy: number;
-    speed: number;
-    creativity: number;
-    technique: number;
-  };
+export interface LessonStep {
+  id: string;
+  title: string;
+  instruction: string;
+  expectedShape?: ShapeType;
+  hints: string[];
+  completed: boolean;
 }
+
+// FIXED: Drawing colors type for LinearGradient compatibility
+export type GradientColors = readonly [ColorValue, ColorValue, ...ColorValue[]];
+
+// FIXED: Color palette helpers
+export const createGradientColors = (colors: string[]): GradientColors => {
+  if (colors.length < 2) {
+    return [colors[0] || '#000000', colors[0] || '#000000'] as const;
+  }
+  return colors as GradientColors;
+};

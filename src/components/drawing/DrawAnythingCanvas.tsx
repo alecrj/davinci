@@ -1,179 +1,217 @@
-import React, { useRef, useState } from 'react';
+// src/components/drawing/DrawAnythingCanvas.tsx - COMPLETE FILE REPLACEMENT
+import React, { forwardRef, useImperativeHandle, useRef, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   PanResponder,
   Dimensions,
+  ViewStyle,
 } from 'react-native';
-import Svg, { Path, G } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '@/context/ThemeContext';
 import { useDrawing } from '@/context/DrawingContext';
+import { DrawingPath, Point } from '@/types/drawing';
 import { detectShape } from '@/utils/drawing/shapeDetection';
-import { Point, DrawingPath, ShapeType } from '@/types/drawing';
+import { hapticFeedback } from '@/utils/platform/haptics';
 
-interface DrawAnythingCanvasProps {
-  width: number;
-  height: number;
-  onDrawingComplete: (shape: ShapeType, drawing: any) => void;
+// FIXED: Proper props interface with ref support
+export interface DrawAnythingCanvasProps {
+  onShapeDetected?: (shape: string) => void;
+  style?: ViewStyle;
 }
 
-export const DrawAnythingCanvas: React.FC<DrawAnythingCanvasProps> = ({
-  width,
-  height,
-  onDrawingComplete,
-}) => {
-  const { theme } = useTheme();
-  const { drawingState, addPath, clearDrawing } = useDrawing();
-  
-  const [currentPath, setCurrentPath] = useState<Point[]>([]);
-  const [paths, setPaths] = useState<DrawingPath[]>([]);
-  const pathIdRef = useRef(0);
-  
-  const panResponder = useRef(
-    PanResponder.create({
+// FIXED: Add ref methods interface
+export interface DrawAnythingCanvasRef {
+  clear: () => void;
+  undo: () => void;
+  redo: () => void;
+}
+
+export const DrawAnythingCanvas = forwardRef<DrawAnythingCanvasRef, DrawAnythingCanvasProps>(
+  ({ onShapeDetected, style }, ref) => {
+    const theme = useTheme();
+    const { drawingState, addPath, clearDrawing, undo, redo, canUndo, canRedo } = useDrawing();
+    
+    const [currentPath, setCurrentPath] = useState<Point[]>([]);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const pathIdRef = useRef(0);
+
+    // FIXED: Expose methods to parent component
+    useImperativeHandle(ref, () => ({
+      clear: () => {
+        clearDrawing();
+        hapticFeedback('light');
+      },
+      undo: () => {
+        if (canUndo) {
+          undo();
+          hapticFeedback('light');
+        }
+      },
+      redo: () => {
+        if (canRedo) {
+          redo();
+          hapticFeedback('light');
+        }
+      },
+    }));
+
+    const createPathString = useCallback((points: Point[]): string => {
+      if (points.length === 0) return '';
+      
+      let path = `M${points[0].x},${points[0].y}`;
+      for (let i = 1; i < points.length; i++) {
+        path += ` L${points[i].x},${points[i].y}`;
+      }
+      return path;
+    }, []);
+
+    const handleShapeDetection = useCallback((points: Point[]) => {
+      if (points.length < 10) return; // Need minimum points for detection
+      
+      const detectionResult = detectShape(points);
+      if (detectionResult.confidence > 0.6) {
+        hapticFeedback('success');
+        onShapeDetected?.(detectionResult.type);
+      }
+    }, [onShapeDetected]);
+
+    const panResponder = PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-      
+
       onPanResponderGrant: (evt) => {
         const { locationX, locationY } = evt.nativeEvent;
-        setCurrentPath([{ x: locationX, y: locationY }]);
-      },
-      
-      onPanResponderMove: (evt) => {
-        const { locationX, locationY } = evt.nativeEvent;
-        setCurrentPath(prev => [...prev, { x: locationX, y: locationY }]);
-      },
-      
-      onPanResponderRelease: () => {
-        if (currentPath.length > 5) {
-          const newPath: DrawingPath = {
-            id: `path-${pathIdRef.current++}`,
-            points: currentPath,
-            color: theme.accent,
-            width: 4,
-            timestamp: Date.now(),
-          };
-          
-          const updatedPaths = [...paths, newPath];
-          setPaths(updatedPaths);
-          addPath(newPath);
-          
-          // Detect shape after a brief delay
-          setTimeout(() => {
-            const detectedShape = detectShape(updatedPaths);
-            if (detectedShape) {
-              onDrawingComplete(detectedShape.type, {
-                paths: updatedPaths,
-                shape: detectedShape,
-              });
-            }
-          }, 500);
-        }
+        const newPoint: Point = { x: locationX, y: locationY };
         
-        setCurrentPath([]);
+        setCurrentPath([newPoint]);
+        setIsDrawing(true);
+        hapticFeedback('light');
       },
-    })
-  ).current;
-  
-  const createPathData = (points: Point[]): string => {
-    if (points.length < 2) return '';
-    
-    let path = `M ${points[0].x} ${points[0].y}`;
-    
-    // Use quadratic bezier curves for smooth lines
-    for (let i = 1; i < points.length - 1; i++) {
-      const xc = (points[i].x + points[i + 1].x) / 2;
-      const yc = (points[i].y + points[i + 1].y) / 2;
-      path += ` Q ${points[i].x} ${points[i].y}, ${xc} ${yc}`;
-    }
-    
-    // Last point
-    if (points.length > 1) {
-      path += ` L ${points[points.length - 1].x} ${points[points.length - 1].y}`;
-    }
-    
-    return path;
-  };
-  
-  return (
-    <View 
-      style={[
-        styles.container,
-        { 
-          width,
-          height,
-          backgroundColor: theme.drawingCanvas,
-          borderColor: theme.border,
-        },
-      ]}
-      {...panResponder.panHandlers}
-    >
-      <Svg width={width} height={height} style={StyleSheet.absoluteFillObject}>
-        <G>
-          {/* Render completed paths */}
-          {paths.map((path) => (
+
+      onPanResponderMove: (evt) => {
+        if (!isDrawing) return;
+        
+        const { locationX, locationY } = evt.nativeEvent;
+        const newPoint: Point = { x: locationX, y: locationY };
+        
+        setCurrentPath(prev => [...prev, newPoint]);
+      },
+
+      onPanResponderRelease: () => {
+        if (!isDrawing || currentPath.length === 0) return;
+
+        // Create drawing path
+        const drawingPath: DrawingPath = {
+          id: `path-${pathIdRef.current++}`,
+          points: currentPath,
+          color: theme.colors.primary,
+          width: 4,
+          timestamp: Date.now(),
+        };
+
+        // Add to drawing context
+        addPath(drawingPath);
+
+        // Detect shape
+        handleShapeDetection(currentPath);
+
+        // Reset current path
+        setCurrentPath([]);
+        setIsDrawing(false);
+        hapticFeedback('light');
+      },
+    });
+
+    const { width, height } = Dimensions.get('window');
+    const canvasWidth = width - 32;
+    const canvasHeight = height * 0.5;
+
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.colors.card,
+            borderColor: theme.colors.border,
+          },
+          style,
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <Svg
+          width={canvasWidth}
+          height={canvasHeight}
+          style={styles.svg}
+        >
+          {/* Grid lines */}
+          <GridLines width={canvasWidth} height={canvasHeight} theme={theme} />
+          
+          {/* Completed paths */}
+          {drawingState.currentSession?.strokes.map((stroke) => (
             <Path
-              key={path.id}
-              d={createPathData(path.points)}
-              stroke={path.color}
-              strokeWidth={path.width}
+              key={stroke.id}
+              d={createPathString(stroke.path.points)}
+              stroke={stroke.path.color}
+              strokeWidth={stroke.path.width}
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           ))}
           
-          {/* Render current path */}
+          {/* Current drawing path */}
           {currentPath.length > 0 && (
             <Path
-              d={createPathData(currentPath)}
-              stroke={theme.accent}
+              d={createPathString(currentPath)}
+              stroke={theme.colors.primary}
               strokeWidth={4}
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
-              opacity={0.8}
             />
           )}
-        </G>
-      </Svg>
-      
-      {/* Grid overlay for better drawing guidance */}
-      <View style={styles.gridOverlay} pointerEvents="none">
-        <View style={[styles.gridLine, styles.horizontal, { borderColor: theme.border + '20' }]} />
-        <View style={[styles.gridLine, styles.vertical, { borderColor: theme.border + '20' }]} />
+        </Svg>
       </View>
-    </View>
-  );
-};
+    );
+  }
+);
+
+// Grid component for visual aid
+const GridLines: React.FC<{ width: number; height: number; theme: any }> = ({ width, height, theme }) => (
+  <>
+    {/* Horizontal grid lines */}
+    {Array.from({ length: Math.floor(height / 40) }, (_, i) => (
+      <Path
+        key={`h-${i}`}
+        d={`M0,${i * 40} L${width},${i * 40}`}
+        stroke={theme.colors.border + '20'}
+        strokeWidth={1}
+      />
+    ))}
+    {/* Vertical grid lines */}
+    {Array.from({ length: Math.floor(width / 40) }, (_, i) => (
+      <Path
+        key={`v-${i}`}
+        d={`M${i * 40},0 L${i * 40},${height}`}
+        stroke={theme.colors.border + '20'}
+        strokeWidth={1}
+      />
+    ))}
+  </>
+);
+
+// Add display name for debugging
+DrawAnythingCanvas.displayName = 'DrawAnythingCanvas';
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 2,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    margin: 16,
   },
-  gridOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  gridLine: {
-    position: 'absolute',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-  },
-  horizontal: {
-    top: '50%',
-    left: 0,
-    right: 0,
-  },
-  vertical: {
-    left: '50%',
-    top: 0,
-    bottom: 0,
+  svg: {
+    flex: 1,
   },
 });

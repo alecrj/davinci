@@ -1,171 +1,128 @@
+// components/TouchDrawingCanvas.tsx - COMPLETE FILE REPLACEMENT
 import React, { useRef, useState } from 'react';
-import {
-  View,
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
-  State,
-} from 'react-native';
-import { PanGestureHandlerStateChangeEvent } from 'react-native-gesture-handler';
+import { View, StyleSheet, Dimensions, Text } from 'react-native';
+// FIXED: Import from correct packages
+import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 interface TouchDrawingCanvasProps {
-  width: number;
-  height: number;
-  onDrawingComplete: (path: Array<{x: number, y: number}>) => void;
+  onPathComplete?: (path: string) => void;
 }
 
-export const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
-  width,
-  height,
-  onDrawingComplete,
-}) => {
+export default function TouchDrawingCanvas({ onPathComplete }: TouchDrawingCanvasProps) {
   const [paths, setPaths] = useState<string[]>([]);
   const [currentPath, setCurrentPath] = useState<string>('');
-  const [isDrawing, setIsDrawing] = useState(false);
-  const pathPoints = useRef<Array<{x: number, y: number}>>([]);
+  const panRef = useRef(null);
 
   const onGestureEvent = (event: PanGestureHandlerGestureEvent) => {
     const { x, y } = event.nativeEvent;
-    
-    // Ensure coordinates are within canvas bounds
-    const clampedX = Math.max(0, Math.min(x, width));
-    const clampedY = Math.max(0, Math.min(y, height));
-    
-    pathPoints.current.push({ x: clampedX, y: clampedY });
-    
-    if (!isDrawing) {
-      setIsDrawing(true);
-      setCurrentPath(`M${clampedX},${clampedY}`);
-    } else {
-      setCurrentPath(prev => `${prev} L${clampedX},${clampedY}`);
-    }
+    const newPath = currentPath === '' ? `M${x},${y}` : `${currentPath} L${x},${y}`;
+    setCurrentPath(newPath);
   };
 
-  const onHandlerStateChange = (event: PanGestureHandlerStateChangeEvent) => {
+  const onHandlerStateChange = (event: PanGestureHandlerGestureEvent) => {
     if (event.nativeEvent.state === State.BEGAN) {
-      setIsDrawing(true);
-      pathPoints.current = [];
+      const { x, y } = event.nativeEvent;
+      setCurrentPath(`M${x},${y}`);
     } else if (event.nativeEvent.state === State.END) {
-      setIsDrawing(false);
-      
-      // Add current path to paths array
-      if (currentPath) {
+      if (currentPath !== '') {
         setPaths(prev => [...prev, currentPath]);
+        onPathComplete?.(currentPath);
         setCurrentPath('');
-        
-        // Call completion callback with path points
-        if (pathPoints.current.length > 0) {
-          onDrawingComplete([...pathPoints.current]);
-        }
       }
     }
   };
 
-  const clearCanvas = () => {
-    setPaths([]);
-    setCurrentPath('');
-    pathPoints.current = [];
-  };
+  const { width, height } = Dimensions.get('window');
+  const canvasHeight = height * 0.6;
 
   return (
-    <View
-      style={{
-        width,
-        height,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        borderWidth: 2,
-        borderColor: '#E5E7EB',
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-      }}
-    >
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Draw Something!</Text>
+        <Text style={styles.subtitle}>Use your finger to draw</Text>
+      </View>
+      
       <PanGestureHandler
+        ref={panRef}
         onGestureEvent={onGestureEvent}
         onHandlerStateChange={onHandlerStateChange}
-        shouldCancelWhenOutside={false}
-        minPointers={1}
-        maxPointers={1}
       >
-        <View style={{ flex: 1 }}>
-          <Svg
-            width={width}
-            height={height}
-            style={{ position: 'absolute' }}
-          >
-            {/* Render completed paths */}
+        <Animated.View style={[styles.canvas, { width, height: canvasHeight }]}>
+          <Svg width={width} height={canvasHeight} style={StyleSheet.absoluteFillObject}>
             {paths.map((path, index) => (
               <Path
                 key={index}
                 d={path}
-                stroke="#4A90E2"
-                strokeWidth={4}
+                stroke="#007AFF"
+                strokeWidth="4"
+                fill="none"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                fill="none"
               />
             ))}
-            
-            {/* Render current path being drawn */}
-            {currentPath && (
+            {currentPath !== '' && (
               <Path
                 d={currentPath}
-                stroke="#4A90E2"
-                strokeWidth={4}
+                stroke="#007AFF"
+                strokeWidth="4"
+                fill="none"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                fill="none"
-                opacity={0.8}
               />
             )}
           </Svg>
-          
-          {/* Instructions overlay when empty */}
-          {paths.length === 0 && !currentPath && (
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                justifyContent: 'center',
-                alignItems: 'center',
-                pointerEvents: 'none',
-              }}
-            >
-              <View
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 50,
-                  borderWidth: 2,
-                  borderColor: '#D1D5DB',
-                  borderStyle: 'dashed',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: '#9CA3AF',
-                    textAlign: 'center',
-                  }}
-                >
-                  Draw your{'\n'}circle here
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
+        </Animated.View>
       </PanGestureHandler>
+      
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          Paths drawn: {paths.length}
+        </Text>
+      </View>
     </View>
   );
-};
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  header: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+  },
+  canvas: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  footer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#666',
+  },
+});

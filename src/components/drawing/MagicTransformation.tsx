@@ -1,329 +1,304 @@
-import React, { useState, useRef, useEffect } from 'react';
+// src/components/drawing/MagicTransformation.tsx - COMPLETE FILE REPLACEMENT
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Animated,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { ShapeType } from '@/types/drawing';
+import { hapticFeedback } from '@/utils/platform/haptics';
 
-const { width } = Dimensions.get('window');
-
-interface MagicTransformationProps {
-  detectedShape: ShapeType;
-  userDrawing: any;
-  onComplete: () => void;
+// FIXED: Added missing 'shape' property
+export interface MagicTransformationProps {
+  shape: string;  // ADDED: Missing shape property
+  onClose: () => void;
+  visible?: boolean;
 }
 
-// Magic transformations - each shape becomes 5 amazing things!
-const transformations = {
+interface Transformation {
+  emoji: string;
+  name: string;
+  description: string;
+}
+
+const transformations: Record<ShapeType, Transformation[]> = {
   circle: [
-    { emoji: '😊', name: 'Happy Face', description: 'A cheerful smile!' },
     { emoji: '☀️', name: 'Sun', description: 'Bright and warm!' },
-    { emoji: '🍕', name: 'Pizza', description: 'Delicious slice!' },
+    { emoji: '🌕', name: 'Moon', description: 'Peaceful night light' },
     { emoji: '⚽', name: 'Soccer Ball', description: 'Ready to play!' },
-    { emoji: '🌕', name: 'Full Moon', description: 'Beautiful and bright!' },
+    { emoji: '🍕', name: 'Pizza', description: 'Delicious slice!' },
   ],
   square: [
-    { emoji: '🏠', name: 'House', description: 'A cozy home!' },
-    { emoji: '📦', name: 'Gift Box', description: 'Full of surprises!' },
-    { emoji: '🖼️', name: 'Picture Frame', description: 'Art on the wall!' },
-    { emoji: '🧀', name: 'Cheese', description: 'Tasty and yellow!' },
+    { emoji: '📦', name: 'Box', description: 'Perfect container!' },
+    { emoji: '🎁', name: 'Gift', description: 'Special surprise!' },
+    { emoji: '🏠', name: 'House', description: 'Cozy home!' },
     { emoji: '📱', name: 'Phone', description: 'Stay connected!' },
   ],
   triangle: [
-    { emoji: '🏔️', name: 'Mountain', description: 'Tall and majestic!' },
-    { emoji: '🌲', name: 'Pine Tree', description: 'Green and tall!' },
-    { emoji: '🍕', name: 'Pizza Slice', description: 'Triangle shaped!' },
-    { emoji: '⛵', name: 'Sailboat', description: 'Sailing away!' },
-    { emoji: '🔺', name: 'Warning Sign', description: 'Pay attention!' },
+    { emoji: '⛰️', name: 'Mountain', description: 'Reach new heights!' },
+    { emoji: '🍕', name: 'Pizza Slice', description: 'Triangular treat!' },
+    { emoji: '🎪', name: 'Tent', description: 'Adventure awaits!' },
+    { emoji: '🔺', name: 'Arrow Up', description: 'Going up!' },
+  ],
+  rectangle: [
+    { emoji: '📱', name: 'Phone', description: 'Smart device!' },
+    { emoji: '💳', name: 'Card', description: 'Important document!' },
+    { emoji: '📚', name: 'Book', description: 'Knowledge inside!' },
+    { emoji: '🚪', name: 'Door', description: 'New opportunities!' },
   ],
   line: [
-    { emoji: '🏏', name: 'Cricket Bat', description: 'Ready for sport!' },
-    { emoji: '✏️', name: 'Pencil', description: 'For more drawing!' },
-    { emoji: '🚂', name: 'Train Track', description: 'Going places!' },
-    { emoji: '🌈', name: 'Rainbow', description: 'Colorful and bright!' },
-    { emoji: '📏', name: 'Ruler', description: 'Perfectly straight!' },
-  ],
-  squiggle: [
-    { emoji: '🐍', name: 'Snake', description: 'Slithering along!' },
-    { emoji: '🌊', name: 'Ocean Wave', description: 'Peaceful water!' },
-    { emoji: '🍜', name: 'Noodles', description: 'Delicious pasta!' },
-    { emoji: '🧬', name: 'DNA', description: 'Life itself!' },
-    { emoji: '💫', name: 'Shooting Star', description: 'Make a wish!' },
+    { emoji: '🌈', name: 'Rainbow', description: 'Colorful arc!' },
+    { emoji: '⚡', name: 'Lightning', description: 'Electric energy!' },
+    { emoji: '🏹', name: 'Arrow', description: 'Straight and true!' },
+    { emoji: '📏', name: 'Ruler', description: 'Measure twice!' },
   ],
   star: [
-    { emoji: '⭐', name: 'Star', description: 'Shining bright!' },
-    { emoji: '✨', name: 'Sparkles', description: 'Magical dust!' },
-    { emoji: '🏆', name: 'Trophy', description: 'You won!' },
-    { emoji: '⚡', name: 'Lightning', description: 'Electric energy!' },
-    { emoji: '🎆', name: 'Fireworks', description: 'Celebration time!' },
+    { emoji: '⭐', name: 'Star', description: 'Shine bright!' },
+    { emoji: '✨', name: 'Sparkles', description: 'Magical moments!' },
+    { emoji: '🌟', name: 'Glowing Star', description: 'You\'re amazing!' },
+    { emoji: '⚡', name: 'Power', description: 'Full of energy!' },
   ],
   heart: [
-    { emoji: '❤️', name: 'Love Heart', description: 'Full of love!' },
-    { emoji: '🍓', name: 'Strawberry', description: 'Sweet and red!' },
-    { emoji: '💝', name: 'Gift with Bow', description: 'Given with love!' },
-    { emoji: '🌹', name: 'Rose', description: 'Beautiful flower!' },
-    { emoji: '💖', name: 'Sparkling Heart', description: 'Extra special!' },
+    { emoji: '❤️', name: 'Love', description: 'Full of heart!' },
+    { emoji: '💖', name: 'Sparkling Heart', description: 'Pure joy!' },
+    { emoji: '🎈', name: 'Balloon', description: 'Light and happy!' },
+    { emoji: '🌹', name: 'Rose', description: 'Beautiful bloom!' },
+  ],
+  squiggle: [
+    { emoji: '🌊', name: 'Wave', description: 'Ocean rhythm!' },
+    { emoji: '🐍', name: 'Snake', description: 'Slithery friend!' },
+    { emoji: '💫', name: 'Dizzy', description: 'Whirling motion!' },
+    { emoji: '🎭', name: 'Art', description: 'Creative expression!' },
   ],
   spiral: [
-    { emoji: '🌀', name: 'Cyclone', description: 'Spinning around!' },
-    { emoji: '🐚', name: 'Seashell', description: 'Ocean treasure!' },
-    { emoji: '🍭', name: 'Lollipop', description: 'Sweet spiral!' },
-    { emoji: '🌺', name: 'Hibiscus', description: 'Tropical flower!' },
-    { emoji: '🕳️', name: 'Hole', description: 'Deep and mysterious!' },
+    { emoji: '🌀', name: 'Spiral', description: 'Endless motion!' },
+    { emoji: '🍥', name: 'Fish Cake', description: 'Swirled delight!' },
+    { emoji: '🌪️', name: 'Tornado', description: 'Powerful spin!' },
+    { emoji: '🐚', name: 'Shell', description: 'Ocean treasure!' },
   ],
   unknown: [
-    { emoji: '🎨', name: 'Masterpiece', description: 'Unique art!' },
-    { emoji: '👑', name: 'Crown', description: 'Fit for royalty!' },
-    { emoji: '🦄', name: 'Unicorn', description: 'Magical creature!' },
-    { emoji: '🌟', name: 'Special Star', description: 'One of a kind!' },
-    { emoji: '💎', name: 'Diamond', description: 'Precious gem!' },
+    { emoji: '🎨', name: 'Art', description: 'Creative masterpiece!' },
+    { emoji: '✨', name: 'Magic', description: 'Something wonderful!' },
+    { emoji: '🌟', name: 'Special', description: 'One of a kind!' },
+    { emoji: '💫', name: 'Unique', description: 'Beautifully different!' },
   ],
 };
 
 export const MagicTransformation: React.FC<MagicTransformationProps> = ({
-  detectedShape,
-  userDrawing,
-  onComplete,
+  shape,
+  onClose,
+  visible = true,
 }) => {
-  const { theme } = useTheme();
+  const theme = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showTransformations, setShowTransformations] = useState(false);
-  
-  // Animations
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [scaleAnim] = useState(new Animated.Value(0.8));
+
+  const detectedShape = shape as ShapeType;
   const shapeTransformations = transformations[detectedShape] || transformations.unknown;
-  
+
   useEffect(() => {
-    // Initial entrance animation
-    Animated.sequence([
-      Animated.delay(500),
+    if (visible) {
+      // Entrance animation
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 800,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
-          tension: 50,
-          friction: 7,
+          tension: 100,
+          friction: 8,
           useNativeDriver: true,
         }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-      ]),
+      ]).start();
+
+      // Auto-advance transformations
+      const interval = setInterval(() => {
+        setCurrentIndex((prevIndex) => 
+          prevIndex < shapeTransformations.length - 1 ? prevIndex + 1 : 0
+        );
+      }, 2000);
+
+      // Auto-close after showing all transformations
+      const timeout = setTimeout(() => {
+        handleClose();
+      }, shapeTransformations.length * 2000 + 1000);
+
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+      };
+    }
+  }, [visible, shapeTransformations.length]);
+
+  const handleClose = () => {
+    hapticFeedback('light');
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.8,
+        duration: 300,
+        useNativeDriver: true,
+      }),
     ]).start(() => {
-      // Start showing transformations after entrance
-      setTimeout(() => {
-        setShowTransformations(true);
-        startTransformationCycle();
-      }, 1000);
+      onClose();
     });
-  }, []);
-  
-  const startTransformationCycle = () => {
-    const cycleTransformations = () => {
-      setCurrentIndex(prev => {
-        const next = (prev + 1) % shapeTransformations.length;
-        
-        // Animation for each transformation
-        Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.2,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]).start();
-        
-        return next;
-      });
-    };
-    
-    // Cycle through transformations
-    const intervals = [1000, 1200, 1400, 1600, 1800]; // Varying speeds for interest
-    
-    let cycleCount = 0;
-    const cycle = () => {
-      if (cycleCount < shapeTransformations.length - 1) {
-        setTimeout(() => {
-          cycleTransformations();
-          cycleCount++;
-          cycle();
-        }, intervals[cycleCount % intervals.length]);
-      } else {
-        // Complete after showing all transformations
-        setTimeout(() => {
-          onComplete();
-        }, 2000);
-      }
-    };
-    
-    cycle();
   };
-  
+
+  if (!visible) return null;
+
   const currentTransformation = shapeTransformations[currentIndex];
-  const shapeName = detectedShape.charAt(0).toUpperCase() + detectedShape.slice(1);
-  
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Animated.View
         style={[
           styles.content,
           {
             opacity: fadeAnim,
-            transform: [
-              { scale: scaleAnim },
-              { translateY: slideAnim },
-            ],
+            transform: [{ scale: scaleAnim }],
           },
         ]}
       >
-        {/* Magic reveal text */}
-        <Text style={[styles.magicText, { color: theme.accent }]}>
-          ✨ Magic! ✨
-        </Text>
-        
-        <Text style={[styles.detectionText, { color: theme.text }]}>
-          You drew a {shapeName}!
-        </Text>
-        
-        <Text style={[styles.transformText, { color: theme.textSecondary }]}>
-          Look what it can become:
-        </Text>
-        
-        {/* Transformation display */}
-        {showTransformations && (
-          <Animated.View
+        <View style={styles.header}>
+          <Text style={[styles.magicText, { color: theme.colors.primary }]}>
+            ✨ Magic! ✨
+          </Text>
+          <Text style={[styles.detectionText, { color: theme.colors.text }]}>
+            Your {detectedShape} became...
+          </Text>
+          <Text style={[styles.transformText, { color: theme.colors.textSecondary }]}>
+            Something amazing!
+          </Text>
+        </View>
+
+        <View style={styles.transformationContainer}>
+          <TouchableOpacity
             style={[
-              styles.transformationContainer,
+              styles.transformationCard,
               {
-                backgroundColor: theme.backgroundSecondary,
-                borderColor: theme.border,
-                transform: [{ scale: scaleAnim }],
+                backgroundColor: theme.colors.card,
+                borderColor: theme.colors.border,
               },
             ]}
+            onPress={handleClose}
+            activeOpacity={0.9}
           >
-            <Text style={styles.emoji}>
-              {currentTransformation.emoji}
-            </Text>
-            <Text style={[styles.transformationName, { color: theme.text }]}>
+            <Text style={styles.emoji}>{currentTransformation.emoji}</Text>
+            <Text style={[styles.transformationName, { color: theme.colors.text }]}>
               {currentTransformation.name}
             </Text>
-            <Text style={[styles.transformationDescription, { color: theme.textSecondary }]}>
+            <Text style={[styles.transformationDescription, { color: theme.colors.textSecondary }]}>
               {currentTransformation.description}
             </Text>
-          </Animated.View>
-        )}
-        
-        {/* Progress indicator */}
-        <View style={styles.progressContainer}>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.progressIndicator}>
           {shapeTransformations.map((_, index) => (
             <View
               key={index}
               style={[
                 styles.progressDot,
                 {
-                  backgroundColor: index <= currentIndex ? theme.accent : theme.border,
+                  backgroundColor: index <= currentIndex ? theme.colors.primary : theme.colors.border,
                 },
               ]}
             />
           ))}
         </View>
-        
-        <Text style={[styles.bottomText, { color: theme.textTertiary }]}>
-          Your {shapeName} is already 5 different things! 🎉
+
+        <Text style={[styles.bottomText, { color: theme.colors.textSecondary }]}>
+          Tap to continue your creative journey!
         </Text>
       </Animated.View>
     </View>
   );
 };
 
+const { width } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    zIndex: 1000,
   },
   content: {
+    width: width * 0.85,
+    padding: 32,
+    borderRadius: 24,
     alignItems: 'center',
-    width: '100%',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 32,
   },
   magicText: {
-    fontSize: 32,
-    fontFamily: 'SF-Pro-Display-Bold',
-    marginBottom: 16,
-    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
   detectionText: {
-    fontSize: 24,
-    fontFamily: 'SF-Pro-Display-Semibold',
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   transformText: {
-    fontSize: 18,
-    fontFamily: 'SF-Pro-Text-Regular',
-    marginBottom: 40,
+    fontSize: 16,
     textAlign: 'center',
   },
   transformationContainer: {
-    padding: 32,
-    borderRadius: 24,
+    marginBottom: 24,
+  },
+  transformationCard: {
+    padding: 24,
+    borderRadius: 16,
     borderWidth: 2,
     alignItems: 'center',
-    marginBottom: 32,
-    minWidth: width - 80,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    minWidth: 200,
   },
   emoji: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: 48,
+    marginBottom: 12,
   },
   transformationName: {
-    fontSize: 22,
-    fontFamily: 'SF-Pro-Text-Bold',
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
   transformationDescription: {
-    fontSize: 16,
-    fontFamily: 'SF-Pro-Text-Regular',
+    fontSize: 14,
     textAlign: 'center',
   },
-  progressContainer: {
+  progressIndicator: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 24,
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   progressDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
+    marginHorizontal: 4,
   },
   bottomText: {
-    fontSize: 16,
-    fontFamily: 'SF-Pro-Text-Medium',
+    fontSize: 14,
     textAlign: 'center',
-    marginTop: 16,
   },
 });
