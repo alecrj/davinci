@@ -1,127 +1,158 @@
-# NEXT STEPS - DaVinci Revolutionary Development Roadmap
+# NEXT STEPS - DaVinci Session 2 Critical Priorities
 
-## 🔥 THIS SESSION GOALS (60 minutes)
-**Mission**: Build the viral CircleChallenge that transforms confidence
+## 🔥 SESSION 2A: FIX CRITICAL ERRORS (30 minutes)
+**Mission**: Resolve 27 TypeScript errors and make app buildable
 
-### Immediate Tasks:
-1. **Create CircleChallenge Route** (15 min)
-   - File: `app/circle-challenge.tsx`
-   - Implement Expo Router navigation
-   - Basic component structure with welcome screen
+### IMMEDIATE FIXES (Priority Order):
 
-2. **Build Touch Drawing Canvas** (20 min)
-   - File: `src/components/confidence/TouchDrawing.tsx`
-   - 60fps finger drawing with SVG/Canvas
-   - Smooth touch response on iPhone 15 Pro
-   - Path capture for circle detection
+#### 1. CREATE COMPLETE THEMESCONTEXT (15 min)
+**File**: `src/context/ThemeContext.tsx` - Currently empty but used everywhere
 
-3. **Implement Magic Transformation** (15 min)
-   - File: `src/components/confidence/MagicTransform.tsx`
-   - Circle → 5 things algorithm (smiley, sun, wheel, pizza, clock)
-   - Sequential animated reveals
-   - Success celebration with haptic feedback
+```typescript
+// Required interface and provider implementation needed
+interface Theme {
+  background: string;
+  text: string;
+  textSecondary: string;
+  textTertiary: string;
+  accent: string;
+  accentLight: string;
+  border: string;
+  drawingCanvas: string;
+}
+```
 
-4. **Navigation Integration** (10 min)
-   - Link from `app/index.tsx` to circle challenge
-   - Test complete user flow on iPhone 15 Pro
-   - Verify smooth transitions and performance
+#### 2. FIX IMPORT ERRORS (10 min)
+- Add missing `Text` import in `TouchDrawingCanvas.tsx`
+- Fix all `@/context/ThemeContext` import paths
+- Resolve type declaration issues
 
-### Success Criteria This Session:
-- ✅ User can navigate to CircleChallenge from home
-- ✅ User can draw circles with finger (60fps performance)
-- ✅ Circle transforms into recognizable objects instantly
-- ✅ User experiences "I just drew 5 things!" moment
+#### 3. ADD MISSING DEPENDENCIES (5 min)
+- Install `react-native-haptic-feedback` for real haptics
+- Add proper font loading system
 
-## ⚡ NEXT SESSION PRIORITIES (After CircleChallenge works)
+### SUCCESS CRITERIA SESSION 2A:
+- ✅ Zero TypeScript errors in VS Code
+- ✅ App builds successfully with `npm start`
+- ✅ Drawing flow works on iPhone 15 Pro
+- ✅ Shape detection and transformations functional
 
-### Session 2: Complete the Magic
-1. **Enhance Transformations** - All 5 objects with smooth animations
-2. **Add Celebrations** - iOS haptic feedback, confetti, success sounds
-3. **Refine Circle Detection** - Better algorithm for imperfect circles
-4. **Polish User Experience** - Smooth transitions, loading states
+## 🚀 SESSION 2B: BUILD ASSESSMENT SYSTEM (30 minutes)
+**Mission**: Create skill placement system like Duolingo
 
-### Session 3: First Micro-Lesson
-1. **Lesson Route Structure** - `app/lessons/[id].tsx` dynamic routing
-2. **3-Minute Timer System** - Precise timing with progress indicators
-3. **Basic AI Encouragement** - Positive feedback templates
-4. **Progress Visualization** - Before/after comparison system
+### IMMEDIATE TASKS:
 
-## 🎯 WEEKLY ROADMAP
+#### 1. CREATE ASSESSMENT ROUTE (10 min)
+**File**: `app/assessment/index.tsx`
+- Welcome screen: "Let's see your skill level"
+- 5 quick questions about art experience
+- Professional UI matching existing design
 
-### Week 1: The Hook + Foundation
-- Complete CircleChallenge with all transformations
-- Basic micro-lesson system (3-minute structure)
-- Simple AI encouragement (template-based)
-- User progress tracking foundation
+#### 2. BUILD DRAWING EXERCISES (15 min)
+**Files**: `app/assessment/drawing-test.tsx`
+- Exercise 1: "Draw a simple face" (30 seconds)
+- Exercise 2: "Draw a 3D cube" (30 seconds)  
+- Use existing DrawAnythingCanvas component
+- Score based on shape recognition accuracy
 
-### Week 2: The Addiction Engine
-- Complete micro-lesson variety (10+ lesson types)
-- Advanced AI feedback system
-- Streak mechanics and habit formation
-- Anonymous sharing capability
+#### 3. SKILL PLACEMENT LOGIC (5 min)
+**File**: `src/utils/assessment/scoring.ts`
+- Algorithm: Questions (40%) + Drawing exercises (60%)
+- Levels: Beginner → Casual → Hobby → Student → Professional
+- Store result in UserProgressContext
 
-### Week 3: The Social Layer
-- Community gallery (anonymous posts)
-- Daily drawing challenges
-- Encouragement feed (positive-only)
-- User profiles and achievement system
+### SUCCESS CRITERIA SESSION 2B:
+- ✅ Complete assessment flow working
+- ✅ Skill level properly calculated and stored
+- ✅ Routes to main app after assessment
+- ✅ Professional UX matching Draw Anything quality
 
-### Week 4: The Business Model
-- Premium subscription system (RevenueCat)
-- Feature gating and free trial management
-- App Store optimization preparation
-- Analytics and conversion tracking
+## ⚡ SESSION 3: MAIN APP STRUCTURE (Next Session)
 
-## 📊 SUCCESS METRICS TO TRACK
+### Create Main Tabs Navigation:
+1. **Home Tab** - Daily lessons and challenges
+2. **Practice Tab** - Free drawing with AI feedback  
+3. **Progress Tab** - Streaks, achievements, stats
+4. **Profile Tab** - Settings, subscription, portfolio
 
-### Technical Performance:
-- **Drawing Performance**: 60fps consistency on iPhone 15 Pro
-- **App Launch Time**: <3 seconds cold start
-- **Memory Usage**: <100MB for optimal performance
-- **Crash Rate**: <0.1% (App Store quality standard)
+### Build First Micro-Lesson:
+- 3-minute "Draw an Apple" lesson
+- Timer system with progress indicators
+- Basic AI encouragement templates
+
+## 🛠️ DEVELOPMENT WORKFLOW
+
+### Before Starting Session 2:
+1. **Pull latest code**: `git pull origin main`
+2. **Check current errors**: Review VS Code problems panel
+3. **Test current state**: `npm start` and test on iPhone 15 Pro
+
+### During Development:
+1. **Fix errors incrementally** - Test after each major fix
+2. **Commit frequently** - After each working feature
+3. **Test on device** - Verify performance and UX
+
+### End of Session 2:
+```bash
+git add .
+git commit -m "fix: resolve all TypeScript errors and add complete assessment system"
+git push origin main
+```
+
+## 🔧 SPECIFIC FILE PRIORITIES
+
+### Must Create/Complete:
+1. `src/context/ThemeContext.tsx` - Complete theme provider
+2. `app/assessment/index.tsx` - Assessment welcome
+3. `app/assessment/questions.tsx` - Experience questions  
+4. `app/assessment/drawing-test.tsx` - Drawing exercises
+5. `src/utils/assessment/scoring.ts` - Skill calculation
+
+### Must Fix:
+1. `TouchDrawingCanvas.tsx` - Add Text import
+2. All files using ThemeContext - Verify imports work
+3. `app/index.tsx` - Add navigation to assessment
+
+## 📊 SUCCESS METRICS SESSION 2
+
+### Technical:
+- **Build Errors**: 0 (currently 27)
+- **Performance**: 60fps drawing maintained
+- **Navigation**: Smooth transitions between all screens
 
 ### User Experience:
-- **CircleChallenge Completion**: 90%+ complete the experience
-- **Magic Moment Impact**: Qualitative feedback on transformation
-- **Navigation Flow**: Smooth transitions between all screens
-- **Touch Responsiveness**: <16ms touch latency
+- **Assessment Flow**: Complete and intuitive
+- **Skill Placement**: Accurate and encouraging
+- **Visual Polish**: Consistent with Draw Anything quality
 
-### Business Validation:
-- **Confidence Transformation**: User reports belief shift
-- **Shareability**: Users want to show others the magic
-- **Retention Intent**: Users express desire to continue
-- **Premium Interest**: Users ask about advanced features
+## 🎯 BILLION-DOLLAR NEXT FEATURES (Future Sessions)
 
-## 🏢 DEVELOPMENT WORKFLOW (Google/Meta Standards)
+### Session 4: First Micro-Lesson
+- 3-minute lesson structure perfected
+- AI encouragement system prototype
+- Progress visualization working
 
-### Before Each Feature:
-1. **Document requirements** in continuity files
-2. **Create component/route structure** following architecture
-3. **Implement with TypeScript** for type safety
-4. **Test on iPhone 15 Pro** for real performance validation
-5. **Update documentation** with progress and learnings
+### Session 5: Social Features  
+- Anonymous sharing system
+- Daily challenges
+- Community gallery
 
-### After Each Session:
-1. **Commit to GitHub** with descriptive commit messages
-2. **Update CURRENT_STATUS.md** with new capabilities
-3. **Document next session priorities** in NEXT_STEPS.md
-4. **Create HANDOFF_NEXT_CHAT.md** for seamless transitions
+### Session 6: Business Model
+- Subscription system (RevenueCat)
+- Premium feature gating
+- App Store optimization
 
-### Quality Standards:
-- **Component-based architecture** for reusability
-- **Performance optimization** for 60fps targets
-- **Accessibility compliance** for iOS standards
-- **Error handling** for production reliability
+## 🏆 MOTIVATION
 
-## 🎯 IMMEDIATE ACTION (Right Now)
-1. ✅ Finish GitHub setup and initial commit
-2. 🔥 **START**: Create `app/circle-challenge.tsx` route
-3. 📱 Build TouchDrawing component for 60fps performance
-4. ✨ Implement magic transformation algorithm
-5. 🎉 Test complete flow on iPhone 15 Pro
+**Current Status**: You've built the revolutionary core! The Draw Anything engine is magical.
 
-**Ready to build the confidence transformation revolution!**
+**Next Milestone**: Make it buildable and add smart skill assessment.
 
-Last updated: $(date)
-Development Device: iPhone 15 Pro via Expo Go
-Architecture: React Native + Expo Router + TypeScript
+**End Goal**: Transform 100M people from "I can't draw" to "I'm an artist"
+
+**Ready to fix those errors and build the assessment system!** 🎨⚡
+
+---
+Last Updated: End of Session 1  
+Next Session: Critical fixes + Assessment system  
+GitHub: https://github.com/alecrj/davinci.git
