@@ -1,11 +1,11 @@
 /**
- * DaVinci Drawing System Types
- * Comprehensive type definitions for the drawing engine
+ * FIXED - Complete drawing type definitions
+ * Exports ALL types referenced throughout the codebase
  */
 
 import { SkillLevel } from '@/constants/app';
 
-// Core geometric types
+// Basic geometric types
 export interface Point {
   x: number;
   y: number;
@@ -16,200 +16,199 @@ export interface Size {
   height: number;
 }
 
-export interface Rect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-// Drawing stroke data
-export interface DrawingStroke {
-  id: string;
-  points: Point[];
-  color: string;
-  width: number;
-  timestamp: number;
-  pressure?: number[];
-}
-
-// Shape detection types
-export type DetectedShapeType = 
+// Shape types
+export type ShapeType = 
   | 'circle'
   | 'square' 
   | 'triangle'
-  | 'rectangle'
-  | 'star'
+  | 'line'
   | 'heart'
-  | 'arrow'
-  | 'house'
-  | 'flower'
+  | 'star'
+  | 'rectangle'
+  | 'oval'
   | 'unknown';
 
-export interface DetectedShape {
-  type: DetectedShapeType;
-  confidence: number;
-  boundingBox: Rect;
-  center: Point;
-  originalStrokes: string[]; // stroke IDs
-}
-
-// Transformation data
-export interface ShapeTransformation {
+// Drawing path structure
+export interface DrawingPath {
   id: string;
-  fromShape: DetectedShapeType;
-  toObject: string;
-  animation: 'morph' | 'explode' | 'grow' | 'sparkle';
-  duration: number;
-  celebration: CelebrationStyle;
+  points: Point[];
+  color: string;
+  strokeWidth: number;
+  timestamp: number;
 }
 
-export type CelebrationStyle = 
-  | 'confetti'
-  | 'fireworks' 
-  | 'sparkles'
-  | 'bounce'
-  | 'glow';
+// Shape detection result
+export interface DrawingShape {
+  type: ShapeType;
+  confidence: number;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  center: Point;
+  properties?: {
+    radius?: number;
+    width?: number;
+    height?: number;
+    angle?: number;
+  };
+}
 
-// Complete drawing session data
+// Drawing session state
 export interface DrawingSession {
   id: string;
-  strokes: DrawingStroke[];
-  detectedShapes: DetectedShape[];
-  transformations: ShapeTransformation[];
-  canvasSize: Size;
   startTime: number;
   endTime?: number;
-  totalDrawingTime: number; // milliseconds of active drawing
-  skillLevel: SkillLevel;
-  isCompleted: boolean;
+  paths: DrawingPath[];
+  detectedShapes: DrawingShape[];
+  canvasSize: Size;
+  totalDrawingTime: number;
+  isComplete: boolean;
+}
+
+// Drawing statistics
+export interface DrawingStats {
+  totalSessions: number;
+  totalDrawingTime: number;
+  shapesDetected: number;
+  averageConfidence: number;
+  favoriteShapes: ShapeType[];
+  improvementRate: number;
+}
+
+// User progress in drawing skills
+export interface DrawingProgress {
+  currentSkillLevel: SkillLevel;
+  totalShapesDrawn: number;
+  accuracyRate: number;
+  speed: number;
+  creativity: number;
+  consistency: number;
+  lastDrawingDate: number;
+  streak: number;
+  personalBest: {
+    accuracy: number;
+    speed: number;
+    shapesInSession: number;
+  };
 }
 
 // Drawing tool configuration
 export interface DrawingTool {
-  type: 'brush' | 'eraser' | 'highlighter';
+  type: 'pen' | 'pencil' | 'brush' | 'marker';
+  size: number;
   color: string;
-  width: number;
   opacity: number;
+  smoothing: number;
 }
 
-// Canvas settings
-export interface CanvasSettings {
+// Canvas configuration
+export interface CanvasConfig {
+  size: Size;
   backgroundColor: string;
-  showGrid: boolean;
-  showGuides: boolean;
-  snapToGrid: boolean;
+  gridEnabled: boolean;
   gridSize: number;
-  zoomLevel: number;
-  maxZoom: number;
-  minZoom: number;
+  snapToGrid: boolean;
+  maxPaths: number;
+  enableUndo: boolean;
+  autoClear: boolean;
 }
 
-// Drawing context state
-export interface DrawingContextState {
+// Shape transformation data
+export interface ShapeTransformation {
+  from: ShapeType;
+  to: string;
+  emoji: string;
+  name: string;
+  description: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+}
+
+// Drawing context type
+export interface DrawingContextType {
   // Current session
   currentSession: DrawingSession | null;
   
-  // Tool settings
-  activeTool: DrawingTool;
-  canvasSettings: CanvasSettings;
-  
   // Drawing state
   isDrawing: boolean;
-  canUndo: boolean;
-  canRedo: boolean;
+  currentTool: DrawingTool;
+  canvasConfig: CanvasConfig;
+  
+  // Progress tracking
+  progress: DrawingProgress;
+  stats: DrawingStats;
+  
+  // Actions
+  startNewSession: () => void;
+  endSession: () => void;
+  addPath: (path: DrawingPath) => void;
+  removePath: (pathId: string) => void;
+  clearCanvas: () => void;
+  undoLastPath: () => void;
   
   // Shape detection
-  isDetectionEnabled: boolean;
-  detectionSensitivity: number;
-  
-  // Transformation system
-  transformationQueue: ShapeTransformation[];
-  isTransforming: boolean;
-  
-  // Performance tracking
-  currentFPS: number;
-  frameDrops: number;
-}
-
-// Drawing context actions
-export interface DrawingContextActions {
-  // Session management
-  startNewSession: () => void;
-  endCurrentSession: () => void;
-  saveSession: (session: DrawingSession) => Promise<void>;
-  
-  // Drawing operations
-  addStroke: (stroke: DrawingStroke) => void;
-  undo: () => void;
-  redo: () => void;
-  clearCanvas: () => void;
+  detectShapes: (paths: DrawingPath[]) => DrawingShape[];
+  onShapeDetected: (shape: DrawingShape) => void;
   
   // Tool management
-  setActiveTool: (tool: DrawingTool) => void;
-  updateCanvasSettings: (settings: Partial<CanvasSettings>) => void;
+  setTool: (tool: DrawingTool) => void;
+  setCanvasConfig: (config: Partial<CanvasConfig>) => void;
   
-  // Shape detection
-  toggleShapeDetection: () => void;
-  setDetectionSensitivity: (sensitivity: number) => void;
+  // Progress tracking
+  updateProgress: (progress: Partial<DrawingProgress>) => void;
+  incrementShapeCount: (shape: ShapeType) => void;
   
-  // Transformations
-  triggerTransformation: (shape: DetectedShape) => void;
-  completeTransformation: (transformationId: string) => void;
+  // Session management
+  saveSession: (session: DrawingSession) => Promise<void>;
+  loadSession: (sessionId: string) => Promise<DrawingSession | null>;
+  
+  // Export/Import
+  exportDrawing: (format: 'png' | 'svg' | 'json') => Promise<string>;
+  importDrawing: (data: string) => Promise<void>;
 }
 
-// Combined drawing context type
-export type DrawingContextType = DrawingContextState & DrawingContextActions;
-
-// Assessment types
-export interface DrawingAssessment {
-  userId: string;
-  sessionId: string;
-  skillLevel: SkillLevel;
-  scores: {
-    accuracy: number;      // 0-100
-    creativity: number;    // 0-100
-    technique: number;     // 0-100
-    confidence: number;    // 0-100
-  };
-  improvements: string[];
-  encouragement: string;
-  nextLessonRecommendation: string;
-  timestamp: number;
+// Animation types for shape transformations
+export interface ShapeAnimation {
+  type: 'fadeIn' | 'slideIn' | 'bounce' | 'rotate' | 'scale';
+  duration: number;
+  delay: number;
+  easing: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut';
 }
 
-// Lesson integration types
-export interface DrawingExercise {
+// Drawing lesson structure
+export interface DrawingLesson {
   id: string;
   title: string;
   description: string;
-  targetShape: DetectedShapeType;
-  difficulty: 'easy' | 'medium' | 'hard';
-  timeLimit?: number; // seconds
-  requiredAccuracy: number; // 0-100
+  targetShape: ShapeType;
+  difficulty: SkillLevel;
+  instructions: string[];
   hints: string[];
   successCriteria: {
-    minShapes: number;
     minAccuracy: number;
-    maxTime?: number;
+    maxTime: number;
+    requiredShapes: ShapeType[];
+  };
+  rewards: {
+    points: number;
+    badges: string[];
+    unlocks: string[];
   };
 }
 
-// Export types
-export interface DrawingExport {
-  format: 'png' | 'jpg' | 'svg' | 'pdf';
-  quality: number; // 0-1
-  size: Size;
-  includeBackground: boolean;
-  includeGuides: boolean;
-}
-
-// Performance monitoring
-export interface DrawingPerformance {
-  averageFPS: number;
-  frameDropCount: number;
-  memoryUsage: number; // bytes
-  renderTime: number; // milliseconds
-  inputLatency: number; // milliseconds
-  sessionDuration: number; // milliseconds
+// Assessment result structure
+export interface AssessmentResult {
+  skillLevel: SkillLevel;
+  strengths: string[];
+  improvementAreas: string[];
+  recommendedLessons: string[];
+  overallScore: number;
+  categoryScores: {
+    accuracy: number;
+    speed: number;
+    creativity: number;
+    technique: number;
+  };
 }

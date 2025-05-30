@@ -1,48 +1,45 @@
-import { useFonts } from 'expo-font';
+/**
+ * Root layout for the DaVinci app
+ * Sets up global providers and navigation structure
+ */
+
+import React from 'react';
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-// Import contexts
+// Context providers
 import { ThemeProvider } from '@/context/ThemeContext';
-import { UserProgressProvider } from '@/context/UserProgressContext';
-import { DrawingProvider } from '@/context/DrawingContext';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+// Note: Import other contexts after ThemeContext is working
+// import { UserProgressProvider } from '@/context/UserProgressContext';
+// import { DrawingProvider } from '@/context/DrawingContext';
 
 export default function RootLayout() {
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
   return (
-    <ThemeProvider>
-      <UserProgressProvider>
-        <DrawingProvider>
-          <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-            <Stack.Screen name="assessment" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="lessons" options={{ headerShown: false }} />
-            <Stack.Screen name="social" options={{ headerShown: false }} />
-            <Stack.Screen name="subscription" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-        </DrawingProvider>
-      </UserProgressProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        {/* Temporarily comment out other providers until ThemeContext is working */}
+        {/* <UserProgressProvider>
+          <DrawingProvider> */}
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                animation: 'slide_from_right',
+              }}
+            >
+              <Stack.Screen name="index" />
+              <Stack.Screen name="onboarding" />
+              <Stack.Screen name="assessment" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="lessons" />
+              <Stack.Screen name="social" />
+              <Stack.Screen name="subscription" />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <StatusBar style="auto" />
+          {/* </DrawingProvider>
+        </UserProgressProvider> */}
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
