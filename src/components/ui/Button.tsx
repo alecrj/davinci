@@ -1,24 +1,42 @@
+/**
+ * DaVinci Button Component
+ * Premium iOS-style button with haptic feedback
+ */
+
 import React from 'react';
 import {
-  Pressable,
+  TouchableOpacity,
   Text,
   StyleSheet,
   ViewStyle,
   TextStyle,
   ActivityIndicator,
 } from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Colors } from '@/constants/colors';
+import { uiHaptics } from '@/utils/haptics';
 
-interface ButtonProps {
+export type ButtonVariant = 
+  | 'primary'
+  | 'secondary' 
+  | 'outline'
+  | 'ghost'
+  | 'destructive';
+
+export type ButtonSize = 'small' | 'medium' | 'large';
+
+export interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
-  size?: 'small' | 'medium' | 'large';
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   disabled?: boolean;
   loading?: boolean;
+  fullWidth?: boolean;
+  icon?: React.ReactNode;
   style?: ViewStyle;
   textStyle?: TextStyle;
-  icon?: React.ReactNode;
+  hapticFeedback?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -28,112 +46,223 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'medium',
   disabled = false,
   loading = false,
+  fullWidth = false,
+  icon,
   style,
   textStyle,
-  icon,
+  hapticFeedback = true,
 }) => {
-  const { theme } = useTheme();
-  
+  const handlePress = () => {
+    if (disabled || loading) return;
+    
+    if (hapticFeedback) {
+      uiHaptics.buttonPress();
+    }
+    
+    onPress();
+  };
+
   const getButtonStyle = (): ViewStyle => {
-    const baseStyle: ViewStyle = {
-      borderRadius: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-      flexDirection: 'row',
-    };
-    
-    // Size variations
-    const sizeStyles = {
-      small: { paddingHorizontal: 16, paddingVertical: 8, minHeight: 36 },
-      medium: { paddingHorizontal: 24, paddingVertical: 12, minHeight: 48 },
-      large: { paddingHorizontal: 32, paddingVertical: 16, minHeight: 56 },
-    };
-    
-    // Variant styles
-    const variantStyles = {
-      primary: {
-        backgroundColor: disabled ? theme.border : theme.accent,
-        shadowColor: theme.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: disabled ? 0 : 0.1,
-        shadowRadius: 4,
-        elevation: disabled ? 0 : 2,
-      },
-      secondary: {
-        backgroundColor: disabled ? theme.border : theme.backgroundSecondary,
-        borderWidth: 1,
-        borderColor: disabled ? theme.border : theme.accent,
-      },
-      outline: {
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        borderColor: disabled ? theme.border : theme.accent,
-      },
-    };
-    
+    const baseStyle = styles.button;
+    const sizeStyle = styles[size];
+    const variantStyle = styles[variant];
+    const disabledStyle = disabled ? styles.disabled : {};
+    const fullWidthStyle = fullWidth ? styles.fullWidth : {};
+
     return {
       ...baseStyle,
-      ...sizeStyles[size],
-      ...variantStyles[variant],
-      opacity: disabled || loading ? 0.6 : 1,
+      ...sizeStyle,
+      ...variantStyle,
+      ...disabledStyle,
+      ...fullWidthStyle,
+      ...style,
     };
   };
-  
+
   const getTextStyle = (): TextStyle => {
-    const baseTextStyle: TextStyle = {
-      fontWeight: '600',
-      textAlign: 'center',
-    };
-    
-    // Size text styles
-    const sizeTextStyles = {
-      small: { fontSize: 14 },
-      medium: { fontSize: 16 },
-      large: { fontSize: 18 },
-    };
-    
-    // Variant text colors
-    const variantTextColors = {
-      primary: disabled ? theme.textTertiary : 'white',
-      secondary: disabled ? theme.textTertiary : theme.accent,
-      outline: disabled ? theme.textTertiary : theme.accent,
-    };
-    
+    const baseTextStyle = styles.text;
+    const sizeTextStyle = styles[`${size}Text`];
+    const variantTextStyle = styles[`${variant}Text`];
+    const disabledTextStyle = disabled ? styles.disabledText : {};
+
     return {
       ...baseTextStyle,
-      ...sizeTextStyles[size],
-      color: variantTextColors[variant],
+      ...sizeTextStyle,
+      ...variantTextStyle,
+      ...disabledTextStyle,
+      ...textStyle,
     };
   };
-  
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        getButtonStyle(),
-        {
-          transform: [{ scale: pressed && !disabled ? 0.98 : 1 }],
-        },
-        style,
-      ]}
-      onPress={onPress}
-      disabled={disabled || loading}
-      android_ripple={{
-        color: variant === 'primary' ? 'rgba(255,255,255,0.2)' : theme.accent + '20',
-      }}
-    >
-      {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={variant === 'primary' ? 'white' : theme.accent}
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <ActivityIndicator 
+          color={variant === 'primary' ? Colors.light.text : Colors.light.primary}
+          size={size === 'small' ? 'small' : 'small'}
         />
-      ) : (
-        <>
-          {icon && <>{icon}</>}
-          <Text style={[getTextStyle(), textStyle, icon && { marginLeft: 8 }]}>
-            {title}
-          </Text>
-        </>
-      )}
-    </Pressable>
+      );
+    }
+
+    return (
+      <>
+        {icon && icon}
+        <Text style={getTextStyle()}>{title}</Text>
+      </>
+    );
+  };
+
+  // Use gradient for primary buttons
+  if (variant === 'primary' && !disabled) {
+    return (
+      <TouchableOpacity
+        onPress={handlePress}
+        disabled={disabled || loading}
+        activeOpacity={0.8}
+        style={[getButtonStyle(), { padding: 0 }]}
+      >
+        <LinearGradient
+          colors={[Colors.light.primary, Colors.light.secondary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[
+            styles.gradient,
+            styles[size],
+            fullWidth && styles.fullWidth,
+          ]}
+        >
+          {renderContent()}
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      disabled={disabled || loading}
+      activeOpacity={0.8}
+      style={getButtonStyle()}
+    >
+      {renderContent()}
+    </TouchableOpacity>
   );
 };
+
+const styles = StyleSheet.create({
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    gap: 8,
+  },
+  
+  gradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    gap: 8,
+  },
+  
+  // Size variants
+  small: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    minHeight: 36,
+  },
+  
+  medium: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    minHeight: 44,
+  },
+  
+  large: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    minHeight: 52,
+  },
+  
+  // Button variant styles
+  primary: {
+    backgroundColor: Colors.light.primary,
+  },
+  
+  secondary: {
+    backgroundColor: Colors.light.surface,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: Colors.light.primary,
+  },
+  
+  ghost: {
+    backgroundColor: 'transparent',
+  },
+  
+  destructive: {
+    backgroundColor: Colors.light.error,
+  },
+  
+  // Text styles
+  text: {
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  
+  smallText: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  
+  mediumText: {
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  
+  largeText: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  
+  // Text variant styles
+  primaryText: {
+    color: Colors.light.text,
+  },
+  
+  secondaryText: {
+    color: Colors.light.text,
+  },
+  
+  outlineText: {
+    color: Colors.light.primary,
+  },
+  
+  ghostText: {
+    color: Colors.light.primary,
+  },
+  
+  destructiveText: {
+    color: Colors.light.text,
+  },
+  
+  // Disabled styles
+  disabled: {
+    opacity: 0.5,
+  },
+  
+  disabledText: {
+    color: Colors.light.textTertiary,
+  },
+  
+  // Layout modifiers
+  fullWidth: {
+    width: '100%',
+  },
+});

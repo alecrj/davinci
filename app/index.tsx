@@ -1,51 +1,57 @@
-import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useTheme } from '@/context/ThemeContext';
-import { useUserProgress } from '@/context/UserProgressContext';
+/**
+ * DaVinci App Router
+ * Smart routing based on user progress and onboarding state
+ */
 
-export default function Index() {
-  const router = useRouter();
-  const { theme } = useTheme();
-  const { progress } = useUserProgress();
+import { useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import { router } from 'expo-router';
+import { useUserProgress } from '@/context/UserProgressContext';
+import { useTheme } from '@/context/ThemeContext';
+import { Text } from '@/components/Themed';
+
+export default function AppRouter() {
+  const { progress, isLoading } = useUserProgress();
+  const { colors } = useTheme();
 
   useEffect(() => {
-    // Wait a moment for contexts to load
-    const timer = setTimeout(() => {
-      routeUser();
-    }, 500);
+    if (isLoading) {
+      return; // Wait for progress to load
+    }
 
-    return () => clearTimeout(timer);
-  }, [progress]);
-
-  const routeUser = () => {
-    // First time users - go to onboarding
-    if (progress.isNewUser || !progress.hasCompletedOnboarding) {
+    // Route users based on their progress
+    if (!progress.hasCompletedOnboarding) {
+      // First time users go to onboarding
       router.replace('/onboarding/draw-anything');
-      return;
-    }
-
-    // Completed onboarding but not assessment - go to assessment
-    if (!progress.hasCompletedAssessment) {
+    } else if (!progress.hasCompletedAssessment) {
+      // Users who completed onboarding but not assessment
       router.replace('/assessment');
-      return;
+    } else {
+      // Existing users go directly to main app
+      router.replace('/(tabs)');
     }
+  }, [isLoading, progress.hasCompletedOnboarding, progress.hasCompletedAssessment]);
 
-    // Fully onboarded users - go to main app
-    router.replace('/(tabs)');
-  };
-
+  // Show loading screen while determining route
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ActivityIndicator size="large" color={theme.accent} />
+    <View style={{
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    }}>
+      <ActivityIndicator 
+        size="large" 
+        color={colors.primary} 
+      />
+      <Text style={{
+        marginTop: 20,
+        fontSize: 18,
+        fontWeight: '500',
+        color: colors.textSecondary,
+      }}>
+        Loading DaVinci...
+      </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
