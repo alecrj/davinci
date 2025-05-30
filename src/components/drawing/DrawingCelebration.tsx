@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { Button } from '@/components/ui/Button';
+import { triggerHaptic } from '@/utils/haptics';
 import { ShapeType } from '@/types/drawing';
 
 const { width, height } = Dimensions.get('window');
@@ -17,6 +18,55 @@ interface DrawingCelebrationProps {
   onContinue: () => void;
 }
 
+// Celebration messages based on detected shape
+const celebrationMessages = {
+  circle: {
+    title: "Perfect Circle Magic! ⭕",
+    subtitle: "You just created 5 amazing things from one simple circle!",
+    achievement: "Circle Wizard",
+  },
+  square: {
+    title: "Square Success! ⬜",
+    subtitle: "Your square transformed into 5 incredible objects!",
+    achievement: "Shape Master",
+  },
+  triangle: {
+    title: "Triangle Triumph! 🔺",
+    subtitle: "One triangle, five fantastic creations!",
+    achievement: "Geometric Genius",
+  },
+  line: {
+    title: "Line Perfection! ➖",
+    subtitle: "A simple line became 5 wonderful things!",
+    achievement: "Line Artist",
+  },
+  squiggle: {
+    title: "Squiggle Superstar! 〰️",
+    subtitle: "Your creative squiggle is pure art!",
+    achievement: "Creative Spirit",
+  },
+  star: {
+    title: "Star Power! ⭐",
+    subtitle: "You made a star and so much more!",
+    achievement: "Star Creator",
+  },
+  heart: {
+    title: "Heart Magic! ❤️",
+    subtitle: "Your heart drawing is full of love and potential!",
+    achievement: "Heart Artist",
+  },
+  spiral: {
+    title: "Spiral Spectacular! 🌀",
+    subtitle: "What an amazing spiral creation!",
+    achievement: "Spiral Master",
+  },
+  unknown: {
+    title: "Artistic Genius! 🎨",
+    subtitle: "You created something completely unique and wonderful!",
+    achievement: "Original Artist",
+  },
+};
+
 export const DrawingCelebration: React.FC<DrawingCelebrationProps> = ({
   shapeName,
   onContinue,
@@ -24,106 +74,116 @@ export const DrawingCelebration: React.FC<DrawingCelebrationProps> = ({
   const { theme } = useTheme();
   
   // Animations
+  const confettiAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
-  const confettiAnims = useRef(
-    Array(20).fill(0).map(() => ({
-      x: new Animated.Value(0),
-      y: new Animated.Value(0),
-      rotate: new Animated.Value(0),
-      opacity: new Animated.Value(1),
-    }))
-  ).current;
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+  
+  const celebration = celebrationMessages[shapeName] || celebrationMessages.unknown;
   
   useEffect(() => {
-    // Main content animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
+    // Trigger celebration haptics
+    triggerHaptic('success');
+    
+    // Start celebration animation
+    startCelebrationAnimation();
+  }, []);
+  
+  const startCelebrationAnimation = () => {
+    // Confetti explosion
+    Animated.timing(confettiAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+    
+    // Main content entrance
+    Animated.sequence([
+      Animated.delay(200),
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 6,
+          useNativeDriver: true,
+        }),
+      ]),
     ]).start();
     
-    // Confetti animation
-    confettiAnims.forEach((anim, index) => {
-      const randomX = (Math.random() - 0.5) * width;
-      const randomRotate = Math.random() * 720 - 360;
-      
-      Animated.parallel([
-        Animated.timing(anim.x, {
-          toValue: randomX,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(anim.y, {
-          toValue: height,
-          duration: 2000 + Math.random() * 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(anim.rotate, {
-          toValue: randomRotate,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
+    // Achievement badge bounce
+    setTimeout(() => {
+      Animated.loop(
         Animated.sequence([
-          Animated.delay(1500),
-          Animated.timing(anim.opacity, {
+          Animated.timing(bounceAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bounceAnim, {
             toValue: 0,
             duration: 500,
             useNativeDriver: true,
           }),
         ]),
-      ]).start();
-    });
-  }, []);
+        { iterations: 3 }
+      ).start();
+    }, 1000);
+  };
   
-  const getSuccessMessage = () => {
-    const messages = {
-      circle: "You didn't just draw a circle - you created 5 amazing things!",
-      square: "Your square transformed into 5 incredible objects!",
-      triangle: "That triangle became 5 wonderful creations!",
-      line: "Your simple line turned into 5 beautiful things!",
-      squiggle: "Your squiggle transformed into 5 artistic masterpieces!",
-      star: "Your star shines in 5 different ways!",
-      heart: "Your heart created 5 expressions of beauty!",
-      spiral: "Your spiral evolved into 5 fascinating forms!",
-      unknown: "Your unique creation became 5 amazing works of art!",
-    };
-    
-    return messages[shapeName] || messages.unknown;
+  const handleContinue = () => {
+    triggerHaptic('impact');
+    onContinue();
   };
   
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Confetti */}
-      {confettiAnims.map((anim, index) => (
-        <Animated.View
-          key={index}
-          style={[
-            styles.confetti,
-            {
-              backgroundColor: index % 2 ? theme.accent : theme.accentLight,
-              transform: [
-                { translateX: anim.x },
-                { translateY: anim.y },
-                { rotate: anim.rotate.interpolate({
-                  inputRange: [0, 360],
-                  outputRange: ['0deg', '360deg'],
-                }) },
-              ],
-              opacity: anim.opacity,
-            },
-          ]}
-        />
-      ))}
+      {/* Animated confetti background */}
+      <Animated.View
+        style={[
+          styles.confettiContainer,
+          {
+            opacity: confettiAnim,
+            transform: [
+              {
+                scale: confettiAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.5, 1.5],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {/* Confetti particles */}
+        {Array.from({ length: 20 }).map((_, index) => (
+          <Animated.View
+            key={index}
+            style={[
+              styles.confettiParticle,
+              {
+                backgroundColor: index % 2 === 0 ? theme.accent : theme.success,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                transform: [
+                  {
+                    rotate: confettiAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '360deg'],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+        ))}
+      </Animated.View>
       
+      {/* Main celebration content */}
       <Animated.View
         style={[
           styles.content,
@@ -133,39 +193,75 @@ export const DrawingCelebration: React.FC<DrawingCelebrationProps> = ({
           },
         ]}
       >
-        <Text style={[styles.emoji, { fontSize: 80 }]}>🎉</Text>
-        
+        {/* Main celebration text */}
         <Text style={[styles.title, { color: theme.text }]}>
-          Amazing!
+          {celebration.title}
         </Text>
         
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          {getSuccessMessage()}
+          {celebration.subtitle}
         </Text>
         
-        <View style={styles.achievements}>
-          <Text style={[styles.achievementTitle, { color: theme.text }]}>
-            You just proved you can draw:
+        {/* Achievement badge */}
+        <Animated.View
+          style={[
+            styles.achievementBadge,
+            {
+              backgroundColor: theme.accent,
+              transform: [
+                {
+                  scale: bounceAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={styles.achievementIcon}>🏆</Text>
+          <Text style={styles.achievementText}>
+            {celebration.achievement}
           </Text>
-          <Text style={[styles.achievementList, { color: theme.textSecondary }]}>
-            ✓ Faces that smile{'\n'}
-            ✓ Objects that shine{'\n'}
-            ✓ Things that move{'\n'}
-            ✓ Items we use daily{'\n'}
-            ✓ Art that inspires
+        </Animated.View>
+        
+        {/* Key insight message */}
+        <View style={[styles.insightContainer, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+          <Text style={[styles.insightTitle, { color: theme.accent }]}>
+            🧠 You just proved something amazing:
+          </Text>
+          <Text style={[styles.insightText, { color: theme.text }]}>
+            You <Text style={[styles.boldText, { color: theme.accent }]}>CAN</Text> draw! 
+            {'\n'}Everything starts with simple shapes.
           </Text>
         </View>
         
-        <Text style={[styles.revelation, { color: theme.accent }]}>
-          You ARE an artist!
-        </Text>
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statItem, { backgroundColor: theme.backgroundSecondary }]}>
+            <Text style={[styles.statNumber, { color: theme.accent }]}>1</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Drawing</Text>
+          </View>
+          <View style={[styles.statItem, { backgroundColor: theme.backgroundSecondary }]}>
+            <Text style={[styles.statNumber, { color: theme.accent }]}>5</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Objects Created</Text>
+          </View>
+          <View style={[styles.statItem, { backgroundColor: theme.backgroundSecondary }]}>
+            <Text style={[styles.statNumber, { color: theme.accent }]}>∞</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Possibilities</Text>
+          </View>
+        </View>
         
+        {/* Continue button */}
         <Button
-          title="Discover What Else I Can Do"
-          onPress={onContinue}
-          size="large"
+          title="I'm ready to learn more!"
+          onPress={handleContinue}
           style={styles.continueButton}
         />
+        
+        <Text style={[styles.footerText, { color: theme.textTertiary }]}>
+          Next: Let's find your perfect learning level
+        </Text>
       </Animated.View>
     </View>
   );
@@ -177,56 +273,102 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  confetti: {
+  confettiContainer: {
     position: 'absolute',
-    width: 10,
-    height: 10,
-    top: -10,
-    borderRadius: 5,
+    width: '100%',
+    height: '100%',
+  },
+  confettiParticle: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   content: {
     alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emoji: {
-    marginBottom: 20,
+    paddingHorizontal: 24,
+    maxWidth: width - 48,
   },
   title: {
-    fontSize: 48,
+    fontSize: 28,
     fontFamily: 'SF-Pro-Display-Bold',
+    textAlign: 'center',
     marginBottom: 16,
   },
   subtitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'SF-Pro-Text-Regular',
     textAlign: 'center',
-    marginBottom: 40,
-    lineHeight: 28,
+    lineHeight: 24,
+    marginBottom: 32,
   },
-  achievements: {
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  achievementBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 20,
-    padding: 24,
-    marginBottom: 30,
+    marginBottom: 32,
+  },
+  achievementIcon: {
+    fontSize: 24,
+    marginRight: 8,
+  },
+  achievementText: {
+    color: 'white',
+    fontSize: 16,
+    fontFamily: 'SF-Pro-Text-Bold',
+  },
+  insightContainer: {
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 32,
     width: '100%',
   },
-  achievementTitle: {
-    fontSize: 18,
+  insightTitle: {
+    fontSize: 16,
     fontFamily: 'SF-Pro-Text-Semibold',
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
   },
-  achievementList: {
+  insightText: {
     fontSize: 16,
     fontFamily: 'SF-Pro-Text-Regular',
-    lineHeight: 26,
+    textAlign: 'center',
+    lineHeight: 22,
   },
-  revelation: {
-    fontSize: 28,
+  boldText: {
+    fontFamily: 'SF-Pro-Text-Bold',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 32,
+  },
+  statItem: {
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    minWidth: 80,
+  },
+  statNumber: {
+    fontSize: 24,
     fontFamily: 'SF-Pro-Display-Bold',
-    marginBottom: 40,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: 'SF-Pro-Text-Medium',
+    textAlign: 'center',
+    marginTop: 4,
   },
   continueButton: {
-    minWidth: 280,
+    width: '100%',
+    marginBottom: 16,
+  },
+  footerText: {
+    fontSize: 14,
+    fontFamily: 'SF-Pro-Text-Regular',
+    textAlign: 'center',
   },
 });

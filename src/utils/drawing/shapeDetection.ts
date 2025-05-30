@@ -1,45 +1,54 @@
-import { Point, DrawingPath, DrawingShape, ShapeType } from '@/types/drawing';
+import { DrawingPath, DrawingShape, ShapeType, Point } from '@/types/drawing';
+
+/**
+ * Advanced shape detection using geometric analysis
+ * This is the core AI that recognizes what users draw
+ */
 
 export function detectShape(paths: DrawingPath[]): DrawingShape | null {
-  if (paths.length === 0) return null;
+  if (!paths || paths.length === 0) return null;
   
-  // Combine all paths into one set of points
-  const allPoints: Point[] = paths.flatMap(path => path.points);
-  
-  if (allPoints.length < 10) return null;
+  // Combine all points from all paths
+  const allPoints = paths.flatMap(path => path.points);
+  if (allPoints.length < 5) return null;
   
   // Calculate bounding box
   const boundingBox = calculateBoundingBox(allPoints);
-  const center = calculateCenter(allPoints);
+  const center = {
+    x: boundingBox.x + boundingBox.width / 2,
+    y: boundingBox.y + boundingBox.height / 2,
+  };
   
-  // Detect shape type
-  const shapeDetectors = [
-    { detector: isCircle, type: 'circle' as ShapeType },
-    { detector: isSquare, type: 'square' as ShapeType },
-    { detector: isTriangle, type: 'triangle' as ShapeType },
-    { detector: isLine, type: 'line' as ShapeType },
-    { detector: isStar, type: 'star' as ShapeType },
-    { detector: isHeart, type: 'heart' as ShapeType },
-    { detector: isSpiral, type: 'spiral' as ShapeType },
+  // Try different shape detection algorithms
+  const shapeTests = [
+    () => detectCircle(allPoints, boundingBox),
+    () => detectSquare(allPoints, boundingBox),
+    () => detectTriangle(allPoints, boundingBox),
+    () => detectStar(allPoints, boundingBox),
+    () => detectHeart(allPoints, boundingBox),
+    () => detectSpiral(allPoints, boundingBox),
+    () => detectLine(allPoints, boundingBox),
   ];
   
-  for (const { detector, type } of shapeDetectors) {
-    const confidence = detector(allPoints, boundingBox, center);
-    if (confidence > 0.6) {
-      return {
-        type,
-        confidence,
-        boundingBox,
-        center,
-        paths,
-      };
+  let bestMatch: { type: ShapeType; confidence: number } | null = null;
+  
+  for (const test of shapeTests) {
+    const result = test();
+    if (result && result.confidence > 0.6) {
+      if (!bestMatch || result.confidence > bestMatch.confidence) {
+        bestMatch = result;
+      }
     }
   }
   
-  // Default to squiggle if no specific shape detected
+  // If no good match, classify as squiggle
+  if (!bestMatch) {
+    bestMatch = { type: 'squiggle', confidence: 0.5 };
+  }
+  
   return {
-    type: 'squiggle',
-    confidence: 0.8,
+    type: bestMatch.type,
+    confidence: bestMatch.confidence,
     boundingBox,
     center,
     paths,
@@ -47,13 +56,15 @@ export function detectShape(paths: DrawingPath[]): DrawingShape | null {
 }
 
 function calculateBoundingBox(points: Point[]) {
-  const xs = points.map(p => p.x);
-  const ys = points.map(p => p.y);
+  let minX = Infinity, minY = Infinity;
+  let maxX = -Infinity, maxY = -Infinity;
   
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
+  for (const point of points) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
   
   return {
     x: minX,
@@ -63,273 +74,242 @@ function calculateBoundingBox(points: Point[]) {
   };
 }
 
-function calculateCenter(points: Point[]): Point {
-  const sum = points.reduce(
-    (acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }),
-    { x: 0, y: 0 }
-  );
+function detectCircle(points: Point[], boundingBox: any) {
+  const center = {
+    x: boundingBox.x + boundingBox.width / 2,
+    y: boundingBox.y + boundingBox.height / 2,
+  };
+  
+  // Calculate average radius
+  const avgRadius = (boundingBox.width + boundingBox.height) / 4;
+  
+  // Check how many points are close to the circle
+  let closePoints = 0;
+  for (const point of points) {
+    const distance = Math.sqrt(
+      Math.pow(point.x - center.x, 2) + Math.pow(point.y - center.y, 2)
+    );
+    const radiusDiff = Math.abs(distance - avgRadius) / avgRadius;
+    if (radiusDiff < 0.3) closePoints++;
+  }
+  
+  const confidence = closePoints / points.length;
+  const aspectRatio = boundingBox.width / boundingBox.height;
+  const roundnessBonus = 1 - Math.abs(1 - aspectRatio);
   
   return {
-    x: sum.x / points.length,
-    y: sum.y / points.length,
+    type: 'circle' as ShapeType,
+    confidence: confidence * 0.7 + roundnessBonus * 0.3,
   };
 }
 
-function isCircle(points: Point[], boundingBox: any, center: Point): number {
-  // Calculate average distance from center
-  const distances = points.map(p => 
-    Math.sqrt(Math.pow(p.x - center.x, 2) + Math.pow(p.y - center.y, 2))
-  );
-  
-  const avgDistance = distances.reduce((a, b) => a + b, 0) / distances.length;
-  const variance = distances.reduce((sum, d) => sum + Math.pow(d - avgDistance, 2), 0) / distances.length;
-  
-  // Check if width and height are similar (circular)
+function detectSquare(points: Point[], boundingBox: any) {
   const aspectRatio = boundingBox.width / boundingBox.height;
-  const isSquareish = aspectRatio > 0.8 && aspectRatio < 1.2;
+  const isSquareish = Math.abs(1 - aspectRatio) < 0.3;
   
-  // Low variance and square aspect ratio indicates circle
-  const normalizedVariance = variance / (avgDistance * avgDistance);
-  
-  if (isSquareish && normalizedVariance < 0.15) {
-    return 1 - normalizedVariance;
-  }
-  
-  return 0;
-}
-
-function isSquare(points: Point[], boundingBox: any, center: Point): number {
-  // Check for 4 corners
+  // Check for corners (abrupt direction changes)
   const corners = findCorners(points);
+  const hasEnoughCorners = corners >= 3;
   
-  if (corners.length !== 4) return 0;
+  // Check if points roughly follow rectangle perimeter
+  const perimeterPoints = getPerimeterPoints(points, boundingBox);
+  const confidence = perimeterPoints * (isSquareish ? 1.2 : 0.8) * (hasEnoughCorners ? 1.1 : 0.7);
   
-  // Check if corners form a rectangle
-  const aspectRatio = boundingBox.width / boundingBox.height;
-  const isSquareish = aspectRatio > 0.8 && aspectRatio < 1.2;
-  
-  // Check if sides are roughly straight
-  const straightness = calculateStraightness(points, corners);
-  
-  if (isSquareish && straightness > 0.7) {
-    return straightness;
-  }
-  
-  return 0;
+  return {
+    type: 'square' as ShapeType,
+    confidence: Math.min(confidence, 1.0),
+  };
 }
 
-function isTriangle(points: Point[], boundingBox: any, center: Point): number {
+function detectTriangle(points: Point[], boundingBox: any) {
   const corners = findCorners(points);
+  const hasThreeCorners = corners >= 2 && corners <= 4;
   
-  if (corners.length !== 3) return 0;
+  // Check for triangular shape
+  const aspectRatio = boundingBox.height / boundingBox.width;
+  const isTriangular = aspectRatio > 0.6 && aspectRatio < 1.5;
   
-  const straightness = calculateStraightness(points, corners);
+  const confidence = (hasThreeCorners ? 0.6 : 0.3) + (isTriangular ? 0.4 : 0.2);
   
-  if (straightness > 0.7) {
-    return straightness;
-  }
-  
-  return 0;
+  return {
+    type: 'triangle' as ShapeType,
+    confidence,
+  };
 }
 
-function isLine(points: Point[], boundingBox: any, center: Point): number {
-  // Calculate line fit using least squares
-  const n = points.length;
-  const sumX = points.reduce((sum, p) => sum + p.x, 0);
-  const sumY = points.reduce((sum, p) => sum + p.y, 0);
-  const sumXY = points.reduce((sum, p) => sum + p.x * p.y, 0);
-  const sumX2 = points.reduce((sum, p) => sum + p.x * p.x, 0);
-  
-  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-  const intercept = (sumY - slope * sumX) / n;
-  
-  // Calculate R-squared
-  const yMean = sumY / n;
-  const ssTotal = points.reduce((sum, p) => sum + Math.pow(p.y - yMean, 2), 0);
-  const ssResidual = points.reduce((sum, p) => {
-    const yPredicted = slope * p.x + intercept;
-    return sum + Math.pow(p.y - yPredicted, 2);
-  }, 0);
-  
-  const rSquared = 1 - (ssResidual / ssTotal);
-  
-  // High R-squared indicates a line
-  if (rSquared > 0.8) {
-    return rSquared;
-  }
-  
-  return 0;
-}
-
-function isStar(points: Point[], boundingBox: any, center: Point): number {
+function detectStar(points: Point[], boundingBox: any) {
   const corners = findCorners(points);
+  const hasManyCorners = corners >= 5;
   
-  if (corners.length >= 5 && corners.length <= 10) {
-    // Check for alternating distances from center (star pattern)
-    const distances = corners.map(c => 
-      Math.sqrt(Math.pow(c.x - center.x, 2) + Math.pow(c.y - center.y, 2))
+  // Stars tend to have many direction changes
+  const confidence = hasManyCorners ? 0.7 : 0.3;
+  
+  return {
+    type: 'star' as ShapeType,
+    confidence,
+  };
+}
+
+function detectHeart(points: Point[], boundingBox: any) {
+  // Hearts have a distinctive shape - wider at top, pointed at bottom
+  const aspectRatio = boundingBox.height / boundingBox.width;
+  const isHeartProportions = aspectRatio > 0.8 && aspectRatio < 1.3;
+  
+  // Look for curves in upper half
+  const upperPoints = points.filter(p => p.y < boundingBox.y + boundingBox.height * 0.6);
+  const curves = detectCurvature(upperPoints);
+  
+  const confidence = (isHeartProportions ? 0.4 : 0.2) + (curves > 0.3 ? 0.5 : 0.2);
+  
+  return {
+    type: 'heart' as ShapeType,
+    confidence,
+  };
+}
+
+function detectSpiral(points: Point[], boundingBox: any) {
+  if (points.length < 20) return { type: 'spiral' as ShapeType, confidence: 0.1 };
+  
+  // Check for increasing/decreasing radius pattern
+  const center = {
+    x: boundingBox.x + boundingBox.width / 2,
+    y: boundingBox.y + boundingBox.height / 2,
+  };
+  
+  let radiusPattern = 0;
+  for (let i = 10; i < points.length - 10; i++) {
+    const prevRadius = Math.sqrt(
+      Math.pow(points[i-10].x - center.x, 2) + Math.pow(points[i-10].y - center.y, 2)
+    );
+    const currRadius = Math.sqrt(
+      Math.pow(points[i].x - center.x, 2) + Math.pow(points[i].y - center.y, 2)
+    );
+    const nextRadius = Math.sqrt(
+      Math.pow(points[i+10].x - center.x, 2) + Math.pow(points[i+10].y - center.y, 2)
     );
     
-    let alternating = true;
-    for (let i = 0; i < distances.length - 2; i++) {
-      const d1 = distances[i];
-      const d2 = distances[i + 1];
-      const d3 = distances[i + 2];
-      
-      if (!((d1 > d2 && d3 > d2) || (d1 < d2 && d3 < d2))) {
-        alternating = false;
-        break;
-      }
-    }
-    
-    if (alternating) {
-      return 0.8;
+    if ((currRadius > prevRadius && nextRadius > currRadius) ||
+        (currRadius < prevRadius && nextRadius < currRadius)) {
+      radiusPattern++;
     }
   }
   
-  return 0;
+  const confidence = radiusPattern / (points.length - 20);
+  
+  return {
+    type: 'spiral' as ShapeType,
+    confidence: Math.min(confidence * 2, 1.0),
+  };
 }
 
-function isHeart(points: Point[], boundingBox: any, center: Point): number {
-  // Simple heart detection: check for two bumps at top and point at bottom
-  const topPoints = points.filter(p => p.y < center.y);
-  const bottomPoints = points.filter(p => p.y > center.y);
+function detectLine(points: Point[], boundingBox: any) {
+  // Lines are thin and straight
+  const aspectRatio = Math.max(boundingBox.width, boundingBox.height) / 
+                     Math.min(boundingBox.width, boundingBox.height);
+  const isThin = aspectRatio > 4;
   
-  if (topPoints.length > points.length * 0.4 && bottomPoints.length > points.length * 0.3) {
-    // Check for two peaks in top half
-    const leftTop = topPoints.filter(p => p.x < center.x);
-    const rightTop = topPoints.filter(p => p.x > center.x);
-    
-    if (leftTop.length > 10 && rightTop.length > 10) {
-      // Check for single point at bottom
-      const bottomCenter = bottomPoints.filter(p => 
-        Math.abs(p.x - center.x) < boundingBox.width * 0.2
-      );
-      
-      if (bottomCenter.length > bottomPoints.length * 0.3) {
-        return 0.7;
-      }
-    }
-  }
+  // Check straightness
+  const straightness = calculateStraightness(points);
   
-  return 0;
-}
-
-function isSpiral(points: Point[], boundingBox: any, center: Point): number {
-  // Check if distance from center increases over time
-  const distances = points.map(p => 
-    Math.sqrt(Math.pow(p.x - center.x, 2) + Math.pow(p.y - center.y, 2))
-  );
+  const confidence = (isThin ? 0.6 : 0.3) + (straightness * 0.4);
   
-  let increasingCount = 0;
-  for (let i = 1; i < distances.length; i++) {
-    if (distances[i] > distances[i - 1]) {
-      increasingCount++;
-    }
-  }
-  
-  const increasingRatio = increasingCount / (distances.length - 1);
-  
-  if (increasingRatio > 0.6) {
-    return increasingRatio;
-  }
-  
-  return 0;
+  return {
+    type: 'line' as ShapeType,
+    confidence,
+  };
 }
 
 // Helper functions
-function findCorners(points: Point[]): Point[] {
-  const corners: Point[] = [];
-  const angleThreshold = 45; // degrees
+function findCorners(points: Point[]): number {
+  if (points.length < 10) return 0;
+  
+  let corners = 0;
+  const threshold = 45; // degrees
   
   for (let i = 5; i < points.length - 5; i++) {
-    const p1 = points[i - 5];
-    const p2 = points[i];
-    const p3 = points[i + 5];
+    const angle1 = calculateAngle(points[i-5], points[i]);
+    const angle2 = calculateAngle(points[i], points[i+5]);
+    const angleDiff = Math.abs(angle1 - angle2);
     
-    const angle = calculateAngle(p1, p2, p3);
-    
-    if (angle < angleThreshold) {
-      corners.push(p2);
+    if (angleDiff > threshold && angleDiff < 360 - threshold) {
+      corners++;
     }
   }
   
   return corners;
 }
 
-function calculateAngle(p1: Point, p2: Point, p3: Point): number {
-  const a = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-  const b = Math.sqrt(Math.pow(p2.x - p3.x, 2) + Math.pow(p2.y - p3.y, 2));
-  const c = Math.sqrt(Math.pow(p1.x - p3.x, 2) + Math.pow(p1.y - p3.y, 2));
-  
-  const angle = Math.acos((a * a + b * b - c * c) / (2 * a * b));
-  return (angle * 180) / Math.PI;
+function calculateAngle(p1: Point, p2: Point): number {
+  return Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
 }
 
-function calculateStraightness(points: Point[], corners: Point[]): number {
-  // Calculate how straight the lines are between corners
-  let totalStraightness = 0;
+function getPerimeterPoints(points: Point[], boundingBox: any): number {
+  const margin = Math.min(boundingBox.width, boundingBox.height) * 0.1;
+  let perimeterPoints = 0;
   
-  for (let i = 0; i < corners.length; i++) {
-    const start = corners[i];
-    const end = corners[(i + 1) % corners.length];
+  for (const point of points) {
+    const nearLeft = Math.abs(point.x - boundingBox.x) < margin;
+    const nearRight = Math.abs(point.x - (boundingBox.x + boundingBox.width)) < margin;
+    const nearTop = Math.abs(point.y - boundingBox.y) < margin;
+    const nearBottom = Math.abs(point.y - (boundingBox.y + boundingBox.height)) < margin;
     
-    // Find points between these corners
-    const segmentPoints = points.filter(p => {
-      // Simple distance-based filtering
-      const distToStart = Math.sqrt(Math.pow(p.x - start.x, 2) + Math.pow(p.y - start.y, 2));
-      const distToEnd = Math.sqrt(Math.pow(p.x - end.x, 2) + Math.pow(p.y - end.y, 2));
-      const totalDist = Math.sqrt(Math.pow(start.x - end.x, 2) + Math.pow(start.y - end.y, 2));
-      
-      return distToStart + distToEnd < totalDist * 1.2;
-    });
-    
-    if (segmentPoints.length > 0) {
-      // Calculate average distance from line
-      const distances = segmentPoints.map(p => {
-        return distanceToLine(p, start, end);
-      });
-      
-      const avgDistance = distances.reduce((a, b) => a + b, 0) / distances.length;
-      const lineLength = Math.sqrt(Math.pow(start.x - end.x, 2) + Math.pow(start.y - end.y, 2));
-      
-      const straightness = 1 - (avgDistance / lineLength);
-      totalStraightness += Math.max(0, straightness);
+    if (nearLeft || nearRight || nearTop || nearBottom) {
+      perimeterPoints++;
     }
   }
   
-  return totalStraightness / corners.length;
+  return perimeterPoints / points.length;
 }
 
-function distanceToLine(point: Point, lineStart: Point, lineEnd: Point): number {
-  const A = point.x - lineStart.x;
-  const B = point.y - lineStart.y;
-  const C = lineEnd.x - lineStart.x;
-  const D = lineEnd.y - lineStart.y;
+function detectCurvature(points: Point[]): number {
+  if (points.length < 10) return 0;
   
-  const dot = A * C + B * D;
-  const lenSq = C * C + D * D;
-  let param = -1;
-  
-  if (lenSq !== 0) {
-    param = dot / lenSq;
+  let curvature = 0;
+  for (let i = 5; i < points.length - 5; i++) {
+    const p1 = points[i-5];
+    const p2 = points[i];
+    const p3 = points[i+5];
+    
+    // Calculate curvature using three points
+    const a = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+    const b = Math.sqrt(Math.pow(p3.x - p2.x, 2) + Math.pow(p3.y - p2.y, 2));
+    const c = Math.sqrt(Math.pow(p3.x - p1.x, 2) + Math.pow(p3.y - p1.y, 2));
+    
+    // Area of triangle
+    const s = (a + b + c) / 2;
+    const area = Math.sqrt(s * (s - a) * (s - b) * (s - c));
+    
+    if (area > 0 && a > 0 && b > 0) {
+      curvature += (4 * area) / (a * b * c);
+    }
   }
   
-  let xx, yy;
+  return curvature / (points.length - 10);
+}
+
+function calculateStraightness(points: Point[]): number {
+  if (points.length < 3) return 1;
   
-  if (param < 0) {
-    xx = lineStart.x;
-    yy = lineStart.y;
-  } else if (param > 1) {
-    xx = lineEnd.x;
-    yy = lineEnd.y;
-  } else {
-    xx = lineStart.x + param * C;
-    yy = lineStart.y + param * D;
+  const start = points[0];
+  const end = points[points.length - 1];
+  const lineLength = Math.sqrt(
+    Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2)
+  );
+  
+  let totalDeviation = 0;
+  for (const point of points) {
+    const deviation = distanceToLine(start, end, point);
+    totalDeviation += deviation;
   }
   
-  const dx = point.x - xx;
-  const dy = point.y - yy;
+  const avgDeviation = totalDeviation / points.length;
+  return Math.max(0, 1 - (avgDeviation / lineLength));
+}
+
+function distanceToLine(lineStart: Point, lineEnd: Point, point: Point): number {
+  const A = lineEnd.y - lineStart.y;
+  const B = lineStart.x - lineEnd.x;
+  const C = lineEnd.x * lineStart.y - lineStart.x * lineEnd.y;
   
-  return Math.sqrt(dx * dx + dy * dy);
+  return Math.abs(A * point.x + B * point.y + C) / Math.sqrt(A * A + B * B);
 }

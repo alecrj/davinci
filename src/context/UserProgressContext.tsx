@@ -1,12 +1,28 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type SkillLevel = 'beginner' | 'casual' | 'hobby' | 'student' | 'professional';
+export type SkillLevel = 'beginner' | 'casual' | 'hobby' | 'student' | 'advanced';
+
+interface AssessmentResults {
+  questionScore: number;
+  drawingScore: number;
+  totalScore: number;
+  exercises: Array<{
+    exerciseId: string;
+    completed: boolean;
+    shapeDetected: string | null;
+    accuracy: number;
+    timeSpent: number;
+  }>;
+}
 
 interface UserProgress {
   isNewUser: boolean;
   hasCompletedOnboarding: boolean;
+  hasCompletedAssessment: boolean;
   skillLevel: SkillLevel | null;
+  assessmentScore: number;
+  assessmentResults: AssessmentResults | null;
   completedLessons: string[];
   currentStreak: number;
   totalDrawings: number;
@@ -24,7 +40,10 @@ interface UserProgressContextType {
 const defaultProgress: UserProgress = {
   isNewUser: true,
   hasCompletedOnboarding: false,
+  hasCompletedAssessment: false,
   skillLevel: null,
+  assessmentScore: 0,
+  assessmentResults: null,
   completedLessons: [],
   currentStreak: 0,
   totalDrawings: 0,
@@ -47,7 +66,9 @@ export const UserProgressProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       const stored = await AsyncStorage.getItem('userProgress');
       if (stored) {
-        setProgress(JSON.parse(stored));
+        const parsedProgress = JSON.parse(stored);
+        // Merge with defaults to handle new fields
+        setProgress({ ...defaultProgress, ...parsedProgress });
       }
     } catch (error) {
       console.error('Failed to load progress:', error);
@@ -55,7 +76,11 @@ export const UserProgressProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const updateProgress = async (updates: Partial<UserProgress>) => {
-    const newProgress = { ...progress, ...updates };
+    const newProgress = { 
+      ...progress, 
+      ...updates,
+      lastActiveDate: new Date().toISOString(),
+    };
     setProgress(newProgress);
     
     try {
