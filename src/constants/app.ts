@@ -3,30 +3,17 @@
  * Includes ALL missing exports referenced in the codebase
  */
 
-// Storage keys for AsyncStorage
-export const STORAGE_KEYS = {
-    THEME: 'theme',
-    USER_PROGRESS: 'userProgress',
-    DRAWING_HISTORY: 'drawingHistory',
-    LESSON_PROGRESS: 'lessonProgress',
-    ACHIEVEMENTS: 'achievements',
-    STREAKS: 'streaks',
-    SUBSCRIPTION: 'subscription',
-    SETTINGS: 'settings',
-    // Missing key that was referenced
-    assessmentResults: 'assessmentResults',
-  } as const;
-  
-  // Skill levels for user progression
-  export const SKILL_LEVELS = {
+// Skill levels for user progression
+export const SKILL_LEVELS = {
     BEGINNER: 'beginner',
     INTERMEDIATE: 'intermediate', 
     ADVANCED: 'advanced',
     EXPERT: 'expert',
   } as const;
   
-  // App configuration
+  // App configuration with STORAGE_KEYS included
   export const APP_CONFIG = {
+    // App metadata
     NAME: 'DaVinci',
     VERSION: '1.0.0',
     BUILD_NUMBER: 1,
@@ -36,6 +23,24 @@ export const STORAGE_KEYS = {
     TARGET_FPS: 60,
     MAX_DRAWING_POINTS: 1000,
     UNDO_HISTORY_LIMIT: 20,
+    HAPTIC_ENABLED: true,
+    
+    // ✅ STORAGE_KEYS INSIDE APP_CONFIG (fixes APP_CONFIG.STORAGE_KEYS errors)
+    STORAGE_KEYS: {
+      USER_PROGRESS: '@davinci:user_progress',
+      THEME: '@davinci:theme',
+      DRAWING_HISTORY: '@davinci:drawingHistory',
+      LESSON_PROGRESS: '@davinci:lessonProgress',
+      ACHIEVEMENTS: '@davinci:achievements',
+      STREAKS: '@davinci:streaks',
+      SUBSCRIPTION: '@davinci:subscription',
+      SETTINGS: '@davinci:settings',
+      ONBOARDING_COMPLETED: '@davinci:onboarding',
+      PREMIUM_STATUS: '@davinci:premium',
+      DRAWING_CACHE: '@davinci:drawings',
+      // Keep your existing key
+      assessmentResults: '@davinci:assessmentResults',
+    },
     
     // Lesson configuration
     LESSON_DURATION_MINUTES: 3,
@@ -51,11 +56,46 @@ export const STORAGE_KEYS = {
     MAX_COMMUNITY_UPLOADS_PER_DAY: 5,
     ARTWORK_MAX_SIZE_MB: 5,
     
-    // Subscription
+    // Business model
     FREE_LESSONS_LIMIT: 3,
     PREMIUM_PRICE_MONTHLY: 9.99,
     PREMIUM_PRICE_YEARLY: 59.99,
+    
+    // Feature flags
+    ENABLE_ANALYTICS: true,
+    ENABLE_CRASH_REPORTING: true,
+    ENABLE_SOCIAL_FEATURES: true,
+    ENABLE_PREMIUM_FEATURES: true,
+    
+    // API Configuration
+    API: {
+      BASE_URL: __DEV__ ? 'http://localhost:3000' : 'https://api.davinci.app',
+      TIMEOUT: 10000,
+      VERSION: 'v1',
+    },
+    
+    // Drawing settings
+    DRAWING: {
+      DEFAULT_STROKE_WIDTH: 3,
+      DEFAULT_STROKE_COLOR: '#007AFF',
+      CANVAS_BACKGROUND: 'transparent',
+      DETECTION_THRESHOLD: 0.6,
+      AUTO_SAVE_INTERVAL: 30000, // 30 seconds
+    },
+    
+    // Animation settings
+    ANIMATIONS: {
+      DEFAULT_DURATION: 300,
+      SPRING_CONFIG: {
+        damping: 10,
+        stiffness: 100,
+      },
+      EASING: 'ease-out',
+    },
   } as const;
+  
+  // Keep your existing exports as separate constants for backward compatibility
+  export const STORAGE_KEYS = APP_CONFIG.STORAGE_KEYS;
   
   // Feature flags for development and A/B testing
   export const FEATURE_FLAGS = {
@@ -135,3 +175,5 @@ export const STORAGE_KEYS = {
   export type FeatureFlag = keyof typeof FEATURE_FLAGS;
   export type AnimationDuration = typeof ANIMATION_DURATION[keyof typeof ANIMATION_DURATION];
   export type HapticPattern = typeof HAPTIC_PATTERNS[keyof typeof HAPTIC_PATTERNS];
+  
+  export default APP_CONFIG;

@@ -1,232 +1,190 @@
-// src/components/drawing/MagicTransformation.tsx - COMPLETE FILE REPLACEMENT
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  Dimensions,
-  TouchableOpacity,
-} from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
-import { ShapeType } from '@/types/drawing';
+// src/components/drawing/MagicTransformation.tsx
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withTiming, 
+  withSequence,
+  Easing 
+} from 'react-native-reanimated';
+import { ShapeType, DrawingPath } from '@/types/drawing';
 import { hapticFeedback } from '@/utils/platform/haptics';
+import { AnimatedText } from '@/components/ui/AnimatedText';
+import { createGradient } from '@/utils/colors/gradientHelper';
 
-// FIXED: Added missing 'shape' property
 export interface MagicTransformationProps {
-  shape: string;  // ADDED: Missing shape property
-  onClose: () => void;
+  // ✅ ADD MISSING PROPS
+  shape: ShapeType;
+  detectedShape?: ShapeType;
+  userDrawing?: any;
+  onComplete?: () => void;
+  
+  // Optional props
   visible?: boolean;
+  duration?: number;
 }
 
-interface Transformation {
-  emoji: string;
-  name: string;
-  description: string;
-}
-
-const transformations: Record<ShapeType, Transformation[]> = {
-  circle: [
-    { emoji: '☀️', name: 'Sun', description: 'Bright and warm!' },
-    { emoji: '🌕', name: 'Moon', description: 'Peaceful night light' },
-    { emoji: '⚽', name: 'Soccer Ball', description: 'Ready to play!' },
-    { emoji: '🍕', name: 'Pizza', description: 'Delicious slice!' },
-  ],
-  square: [
-    { emoji: '📦', name: 'Box', description: 'Perfect container!' },
-    { emoji: '🎁', name: 'Gift', description: 'Special surprise!' },
-    { emoji: '🏠', name: 'House', description: 'Cozy home!' },
-    { emoji: '📱', name: 'Phone', description: 'Stay connected!' },
-  ],
-  triangle: [
-    { emoji: '⛰️', name: 'Mountain', description: 'Reach new heights!' },
-    { emoji: '🍕', name: 'Pizza Slice', description: 'Triangular treat!' },
-    { emoji: '🎪', name: 'Tent', description: 'Adventure awaits!' },
-    { emoji: '🔺', name: 'Arrow Up', description: 'Going up!' },
-  ],
-  rectangle: [
-    { emoji: '📱', name: 'Phone', description: 'Smart device!' },
-    { emoji: '💳', name: 'Card', description: 'Important document!' },
-    { emoji: '📚', name: 'Book', description: 'Knowledge inside!' },
-    { emoji: '🚪', name: 'Door', description: 'New opportunities!' },
-  ],
-  line: [
-    { emoji: '🌈', name: 'Rainbow', description: 'Colorful arc!' },
-    { emoji: '⚡', name: 'Lightning', description: 'Electric energy!' },
-    { emoji: '🏹', name: 'Arrow', description: 'Straight and true!' },
-    { emoji: '📏', name: 'Ruler', description: 'Measure twice!' },
-  ],
-  star: [
-    { emoji: '⭐', name: 'Star', description: 'Shine bright!' },
-    { emoji: '✨', name: 'Sparkles', description: 'Magical moments!' },
-    { emoji: '🌟', name: 'Glowing Star', description: 'You\'re amazing!' },
-    { emoji: '⚡', name: 'Power', description: 'Full of energy!' },
-  ],
-  heart: [
-    { emoji: '❤️', name: 'Love', description: 'Full of heart!' },
-    { emoji: '💖', name: 'Sparkling Heart', description: 'Pure joy!' },
-    { emoji: '🎈', name: 'Balloon', description: 'Light and happy!' },
-    { emoji: '🌹', name: 'Rose', description: 'Beautiful bloom!' },
-  ],
-  squiggle: [
-    { emoji: '🌊', name: 'Wave', description: 'Ocean rhythm!' },
-    { emoji: '🐍', name: 'Snake', description: 'Slithery friend!' },
-    { emoji: '💫', name: 'Dizzy', description: 'Whirling motion!' },
-    { emoji: '🎭', name: 'Art', description: 'Creative expression!' },
-  ],
-  spiral: [
-    { emoji: '🌀', name: 'Spiral', description: 'Endless motion!' },
-    { emoji: '🍥', name: 'Fish Cake', description: 'Swirled delight!' },
-    { emoji: '🌪️', name: 'Tornado', description: 'Powerful spin!' },
-    { emoji: '🐚', name: 'Shell', description: 'Ocean treasure!' },
-  ],
-  unknown: [
-    { emoji: '🎨', name: 'Art', description: 'Creative masterpiece!' },
-    { emoji: '✨', name: 'Magic', description: 'Something wonderful!' },
-    { emoji: '🌟', name: 'Special', description: 'One of a kind!' },
-    { emoji: '💫', name: 'Unique', description: 'Beautifully different!' },
-  ],
-};
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export const MagicTransformation: React.FC<MagicTransformationProps> = ({
   shape,
-  onClose,
+  detectedShape,
+  userDrawing,
+  onComplete,
   visible = true,
+  duration = 2000,
 }) => {
-  const theme = useTheme();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [scaleAnim] = useState(new Animated.Value(0.8));
-
-  const detectedShape = shape as ShapeType;
-  const shapeTransformations = transformations[detectedShape] || transformations.unknown;
+  const [isVisible, setIsVisible] = useState(visible);
+  
+  // Animation values
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const rotation = useSharedValue(0);
+  const sparkleOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
-      // Entrance animation
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Auto-advance transformations
-      const interval = setInterval(() => {
-        setCurrentIndex((prevIndex) => 
-          prevIndex < shapeTransformations.length - 1 ? prevIndex + 1 : 0
-        );
-      }, 2000);
-
-      // Auto-close after showing all transformations
-      const timeout = setTimeout(() => {
-        handleClose();
-      }, shapeTransformations.length * 2000 + 1000);
-
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timeout);
-      };
+      startTransformation();
     }
-  }, [visible, shapeTransformations.length]);
+  }, [visible, shape]);
 
-  const handleClose = () => {
-    hapticFeedback('light');
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 0.8,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onClose();
-    });
+  const startTransformation = async () => {
+    // Success haptic feedback
+    await hapticFeedback.success();
+
+    // Start animation sequence
+    scale.value = withSequence(
+      withTiming(1.2, { duration: 300, easing: Easing.out(Easing.quad) }),
+      withTiming(1, { duration: 200, easing: Easing.in(Easing.quad) })
+    );
+
+    opacity.value = withTiming(1, { duration: 300 });
+    
+    rotation.value = withSequence(
+      withTiming(360, { duration: 800, easing: Easing.out(Easing.quad) }),
+      withTiming(720, { duration: 400, easing: Easing.in(Easing.quad) })
+    );
+
+    sparkleOpacity.value = withSequence(
+      withTiming(1, { duration: 200 }),
+      withTiming(0, { duration: 600 })
+    );
+
+    // Auto-complete after animation
+    setTimeout(() => {
+      setIsVisible(false);
+      onComplete?.();
+    }, duration);
   };
 
-  if (!visible) return null;
+  const containerStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: scale.value },
+      { rotate: `${rotation.value}deg` }
+    ],
+    opacity: opacity.value,
+  }));
 
-  const currentTransformation = shapeTransformations[currentIndex];
+  const sparkleStyle = useAnimatedStyle(() => ({
+    opacity: sparkleOpacity.value,
+  }));
+
+  const getShapeEmoji = (shapeType: ShapeType): string => {
+    switch (shapeType) {
+      case 'circle': return '⭕';
+      case 'square': return '⬜';
+      case 'triangle': return '🔺';
+      case 'rectangle': return '▭';
+      case 'star': return '⭐';
+      case 'heart': return '❤️';
+      case 'line': return '➖';
+      case 'arrow': return '➡️';
+      default: return '✨';
+    }
+  };
+
+  const getShapeName = (shapeType: ShapeType): string => {
+    return shapeType.charAt(0).toUpperCase() + shapeType.slice(1);
+  };
+
+  const getSuccessMessage = (shapeType: ShapeType): string => {
+    const messages = {
+      circle: "Perfect Circle! 🎯",
+      square: "Amazing Square! 📐",
+      triangle: "Brilliant Triangle! 📐",
+      rectangle: "Great Rectangle! 📏",
+      star: "Stunning Star! ⭐",
+      heart: "Beautiful Heart! 💕",
+      line: "Straight Line! 📏",
+      arrow: "Sharp Arrow! 🎯",
+      unknown: "Creative Shape! ✨"
+    };
+    return messages[shapeType] || messages.unknown;
+  };
+
+  if (!isVisible) return null;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
-      >
-        <View style={styles.header}>
-          <Text style={[styles.magicText, { color: theme.colors.primary }]}>
-            ✨ Magic! ✨
-          </Text>
-          <Text style={[styles.detectionText, { color: theme.colors.text }]}>
-            Your {detectedShape} became...
-          </Text>
-          <Text style={[styles.transformText, { color: theme.colors.textSecondary }]}>
-            Something amazing!
-          </Text>
-        </View>
-
-        <View style={styles.transformationContainer}>
-          <TouchableOpacity
-            style={[
-              styles.transformationCard,
-              {
-                backgroundColor: theme.colors.card,
-                borderColor: theme.colors.border,
-              },
-            ]}
-            onPress={handleClose}
-            activeOpacity={0.9}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={createGradient(['rgba(0, 122, 255, 0.1)', 'rgba(88, 86, 214, 0.1)'])}
+        style={styles.background}
+      />
+      
+      <Animated.View style={[styles.transformationContainer, containerStyle]}>
+        {/* Main shape display */}
+        <View style={styles.shapeContainer}>
+          <LinearGradient
+            colors={createGradient(['#007AFF', '#5856D6'])}
+            style={styles.shapeBackground}
           >
-            <Text style={styles.emoji}>{currentTransformation.emoji}</Text>
-            <Text style={[styles.transformationName, { color: theme.colors.text }]}>
-              {currentTransformation.name}
-            </Text>
-            <Text style={[styles.transformationDescription, { color: theme.colors.textSecondary }]}>
-              {currentTransformation.description}
-            </Text>
-          </TouchableOpacity>
+            <AnimatedText
+              style={styles.shapeEmoji}
+              animation="bounceIn"
+            >
+              {getShapeEmoji(shape)}
+            </AnimatedText>
+          </LinearGradient>
         </View>
 
-        <View style={styles.progressIndicator}>
-          {shapeTransformations.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.progressDot,
-                {
-                  backgroundColor: index <= currentIndex ? theme.colors.primary : theme.colors.border,
-                },
-              ]}
-            />
-          ))}
-        </View>
+        {/* Success message */}
+        <AnimatedText
+          style={styles.successText}
+          animation="fadeInUp"
+        >
+          {getSuccessMessage(shape)}
+        </AnimatedText>
 
-        <Text style={[styles.bottomText, { color: theme.colors.textSecondary }]}>
-          Tap to continue your creative journey!
-        </Text>
+        <AnimatedText
+          style={styles.encouragementText}
+          animation="fadeIn"
+        >
+          You're becoming an artist! 🎨
+        </AnimatedText>
+      </Animated.View>
+
+      {/* Sparkle effects */}
+      <Animated.View style={[styles.sparkleContainer, sparkleStyle]}>
+        {[...Array(6)].map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.sparkle,
+              {
+                top: Math.random() * screenHeight * 0.6 + screenHeight * 0.2,
+                left: Math.random() * screenWidth * 0.6 + screenWidth * 0.2,
+              }
+            ]}
+          >
+            <AnimatedText style={styles.sparkleText}>✨</AnimatedText>
+          </View>
+        ))}
       </Animated.View>
     </View>
   );
 };
-
-const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -239,66 +197,61 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1000,
   },
-  content: {
-    width: width * 0.85,
-    padding: 32,
-    borderRadius: 24,
-    alignItems: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  magicText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  detectionText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  transformText: {
-    fontSize: 16,
-    textAlign: 'center',
+  background: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   transformationContainer: {
-    marginBottom: 24,
-  },
-  transformationCard: {
-    padding: 24,
-    borderRadius: 16,
-    borderWidth: 2,
     alignItems: 'center',
-    minWidth: 200,
-  },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  transformationName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  transformationDescription: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  progressIndicator: {
-    flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 16,
   },
-  progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
+  shapeContainer: {
+    marginBottom: 20,
   },
-  bottomText: {
-    fontSize: 14,
+  shapeBackground: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  shapeEmoji: {
+    fontSize: 60,
     textAlign: 'center',
+  },
+  successText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+    color: '#007AFF',
+  },
+  encouragementText: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#5856D6',
+    fontWeight: '600',
+  },
+  sparkleContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+  },
+  sparkle: {
+    position: 'absolute',
+  },
+  sparkleText: {
+    fontSize: 20,
   },
 });

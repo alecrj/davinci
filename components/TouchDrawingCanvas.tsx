@@ -1,128 +1,112 @@
-// components/TouchDrawingCanvas.tsx - COMPLETE FILE REPLACEMENT
-import React, { useRef, useState } from 'react';
-import { View, StyleSheet, Dimensions, Text } from 'react-native';
-// FIXED: Import from correct packages
-import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
-import Animated from 'react-native-reanimated';
+// components/TouchDrawingCanvas.tsx
+import React, { useState, useRef } from 'react';
+import { View, StyleSheet, Dimensions, ViewStyle } from 'react-native';
+import { PanGestureHandler, State, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler'; // ✅ FIXED IMPORTS
 import Svg, { Path } from 'react-native-svg';
+import { Point } from '@/types/drawing';
 
 interface TouchDrawingCanvasProps {
-  onPathComplete?: (path: string) => void;
+  style?: ViewStyle;
+  strokeColor?: string;
+  strokeWidth?: number;
+  onDrawingComplete?: (path: Point[]) => void;
 }
 
-export default function TouchDrawingCanvas({ onPathComplete }: TouchDrawingCanvasProps) {
-  const [paths, setPaths] = useState<string[]>([]);
-  const [currentPath, setCurrentPath] = useState<string>('');
-  const panRef = useRef(null);
+// ✅ PROPER DEFAULT EXPORT
+const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
+  style,
+  strokeColor = '#007AFF',
+  strokeWidth = 3,
+  onDrawingComplete,
+}) => {
+  const [paths, setPaths] = useState<Point[][]>([]);
+  const [currentPath, setCurrentPath] = useState<Point[]>([]);
+  const [isDrawing, setIsDrawing] = useState(false);
 
-  const onGestureEvent = (event: PanGestureHandlerGestureEvent) => {
+  const handleGestureEvent = (event: PanGestureHandlerGestureEvent) => {
     const { x, y } = event.nativeEvent;
-    const newPath = currentPath === '' ? `M${x},${y}` : `${currentPath} L${x},${y}`;
-    setCurrentPath(newPath);
-  };
+    const point: Point = { x, y };
 
-  const onHandlerStateChange = (event: PanGestureHandlerGestureEvent) => {
-    if (event.nativeEvent.state === State.BEGAN) {
-      const { x, y } = event.nativeEvent;
-      setCurrentPath(`M${x},${y}`);
-    } else if (event.nativeEvent.state === State.END) {
-      if (currentPath !== '') {
-        setPaths(prev => [...prev, currentPath]);
-        onPathComplete?.(currentPath);
-        setCurrentPath('');
-      }
+    if (isDrawing) {
+      setCurrentPath(prev => [...prev, point]);
     }
   };
 
+  const handleStateChange = (event: any) => {
+    const { state } = event.nativeEvent;
+
+    if (state === State.BEGAN) {
+      const { x, y } = event.nativeEvent;
+      const point: Point = { x, y };
+      setCurrentPath([point]);
+      setIsDrawing(true);
+    } else if (state === State.END || state === State.CANCELLED) {
+      if (currentPath.length > 0) {
+        setPaths(prev => [...prev, currentPath]);
+        onDrawingComplete?.(currentPath);
+      }
+      setCurrentPath([]);
+      setIsDrawing(false);
+    }
+  };
+
+  const createPathData = (points: Point[]): string => {
+    if (points.length < 2) return '';
+    
+    let pathData = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      pathData += ` L ${points[i].x} ${points[i].y}`;
+    }
+    return pathData;
+  };
+
   const { width, height } = Dimensions.get('window');
-  const canvasHeight = height * 0.6;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Draw Something!</Text>
-        <Text style={styles.subtitle}>Use your finger to draw</Text>
+    <PanGestureHandler
+      onGestureEvent={handleGestureEvent}
+      onHandlerStateChange={handleStateChange}
+    >
+      <View style={[styles.container, { width: width - 40, height: 400 }, style]}>
+        <Svg width="100%" height="100%">
+          {/* Render completed paths */}
+          {paths.map((path, index) => (
+            <Path
+              key={index}
+              d={createPathData(path)}
+              stroke={strokeColor}
+              strokeWidth={strokeWidth}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ))}
+          
+          {/* Render current drawing path */}
+          {currentPath.length > 1 && (
+            <Path
+              d={createPathData(currentPath)}
+              stroke={strokeColor}
+              strokeWidth={strokeWidth}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+        </Svg>
       </View>
-      
-      <PanGestureHandler
-        ref={panRef}
-        onGestureEvent={onGestureEvent}
-        onHandlerStateChange={onHandlerStateChange}
-      >
-        <Animated.View style={[styles.canvas, { width, height: canvasHeight }]}>
-          <Svg width={width} height={canvasHeight} style={StyleSheet.absoluteFillObject}>
-            {paths.map((path, index) => (
-              <Path
-                key={index}
-                d={path}
-                stroke="#007AFF"
-                strokeWidth="4"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ))}
-            {currentPath !== '' && (
-              <Path
-                d={currentPath}
-                stroke="#007AFF"
-                strokeWidth="4"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )}
-          </Svg>
-        </Animated.View>
-      </PanGestureHandler>
-      
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Paths drawn: {paths.length}
-        </Text>
-      </View>
-    </View>
+    </PanGestureHandler>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  canvas: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    margin: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  footer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#666',
+    backgroundColor: 'transparent',
+    borderRadius: 12,
   },
 });
+
+export default TouchDrawingCanvas; // ✅ PROPER DEFAULT EXPORT
+
+// ✅ ALSO PROVIDE NAMED EXPORT FOR COMPATIBILITY
+export { TouchDrawingCanvas };

@@ -1,63 +1,31 @@
-// CRITICAL FIX 4: src/types/drawing.ts
-// Adding all missing type exports that are causing import errors
-
+// src/types/drawing.ts
 import { ColorValue } from 'react-native';
 
-// FIXED: Complete Point interface
+// Core drawing types
 export interface Point {
   x: number;
   y: number;
 }
 
-// FIXED: Complete Size interface
-export interface Size {
-  width: number;
-  height: number;
-}
-
-// FIXED: Drawing path with all required properties
 export interface DrawingPath {
   id: string;
   points: Point[];
   color: string;
-  width: number; // Added missing width property
+  width: number;
   timestamp: number;
 }
 
-// FIXED: Drawing stroke interface (was missing)
-export interface DrawingStroke {
-  id: string;
-  path: DrawingPath;
-  pressure?: number;
-  velocity?: number;
-}
-
-// FIXED: Shape type with all possible shapes
 export type ShapeType = 
-  | 'circle' 
+  | 'circle'
   | 'square' 
-  | 'triangle' 
-  | 'rectangle'  // Added missing rectangle
-  | 'line' 
-  | 'star' 
-  | 'heart' 
-  | 'squiggle'   // Added missing squiggle
-  | 'spiral'     // Added missing spiral
+  | 'triangle'
+  | 'rectangle'
+  | 'star'
+  | 'heart'
+  | 'line'
+  | 'arrow'
   | 'unknown';
 
-// FIXED: Detected shape interface
-export interface DetectedShape {
-  type: ShapeType;
-  confidence: number;
-  boundingBox: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-}
-
-// FIXED: Drawing shape with paths property
 export interface DrawingShape {
   type: ShapeType;
   confidence: number;
@@ -67,119 +35,81 @@ export interface DrawingShape {
     width: number;
     height: number;
   };
-  paths: DrawingPath[]; // Added missing paths property
+  points: Point[];
 }
 
-// FIXED: Drawing tool interface
+export interface ShapeDetectionResult {
+  type: ShapeType;
+  confidence: number;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+// ✅ PROPER GRADIENT COLORS TYPE
+export type GradientColors = readonly [ColorValue, ColorValue, ...ColorValue[]];
+
+// Canvas and drawing state
+export interface DrawingState {
+  paths: DrawingPath[];
+  currentPath: Point[];
+  isDrawing: boolean;
+  tool: DrawingTool;
+  strokeColor: string;
+  strokeWidth: number;
+}
+
 export interface DrawingTool {
-  id: string;
-  name: string;
-  color: string;
-  width: number; // Added missing width property
+  type: 'pen' | 'brush' | 'eraser' | 'highlighter';
+  size: number;
   opacity: number;
 }
 
-// FIXED: Canvas settings interface
-export interface CanvasSettings {
-  backgroundColor: string;
-  gridEnabled: boolean;
-  gridColor: string;
-  snapToGrid: boolean;
-  gridSize: number;
-}
-
-// FIXED: Shape transformation with id property
-export interface ShapeTransformation {
-  id: string;           // Added missing id property
-  fromShape: ShapeType;
-  toObject: string;
-  confidence: number;
-  description: string;
-  celebrationText: string;
-}
-
-// FIXED: Drawing session with all properties
-export interface DrawingSession {
+// Lesson and progress types
+export interface LessonStep {
   id: string;
-  startTime: number;
-  endTime?: number;
-  strokes: DrawingStroke[];        // Added missing strokes property
-  transformations: ShapeTransformation[]; // Added missing transformations property
-  isComplete: boolean;
-  totalTime: number;
-  shapesDetected: ShapeType[];
-  finalScore?: number;
+  type: 'instruction' | 'drawing' | 'feedback';
+  title: string;
+  description: string;
+  targetShape?: ShapeType;
+  duration?: number;
 }
 
-// FIXED: Drawing state interface
-export interface DrawingState {
-  currentSession: DrawingSession | null;
-  sessions: DrawingSession[];
-  currentTool: DrawingTool;
-  canvasSettings: CanvasSettings;
-  transformationQueue: ShapeTransformation[];
-  undoStack: DrawingPath[][];
-  redoStack: DrawingPath[][];
-  isDrawing: boolean;
-  lastDetectedShape?: DetectedShape;
-}
-
-// FIXED: Drawing context type with all methods
-export interface DrawingContextType {
-  // State
-  drawingState: DrawingState;      // Added missing drawingState property
-  
-  // Drawing actions  
-  addPath: (path: DrawingPath) => void;
-  clearDrawing: () => void;        // Added missing clearDrawing method
-  startNewSession: () => void;
-  endCurrentSession: () => void;
-  
-  // Tool management
-  setCurrentTool: (tool: DrawingTool) => void;
-  updateCanvasSettings: (settings: Partial<CanvasSettings>) => void;
-  
-  // Shape detection
-  onShapeDetected: (shape: DetectedShape) => void;
-  addTransformation: (transformation: Omit<ShapeTransformation, 'id'>) => void;
-  completeTransformation: (transformationId: string) => void;
-  
-  // History management
-  undo: () => void;
-  redo: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
-}
-
-// FIXED: Lesson types (referenced in components but not defined)
 export interface Lesson {
   id: string;
   title: string;
   description: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   estimatedTime: number;
-  objectives: string[];
   steps: LessonStep[];
+  color: GradientColors; // ✅ USE PROPER TYPE
   locked: boolean;
-  color: readonly [ColorValue, ColorValue, ...ColorValue[]]; // FIXED: Proper LinearGradient type
-}
-
-export interface LessonStep {
-  id: string;
-  title: string;
-  instruction: string;
-  expectedShape?: ShapeType;
-  hints: string[];
   completed: boolean;
+  accuracy?: number;
 }
 
-// FIXED: Drawing colors type for LinearGradient compatibility
-export type GradientColors = readonly [ColorValue, ColorValue, ...ColorValue[]];
-
-// FIXED: Color palette helpers
+// Helper functions for type conversion
 export const createGradientColors = (colors: string[]): GradientColors => {
   if (colors.length < 2) {
-    return [colors[0] || '#000000', colors[0] || '#000000'] as const;
+    return ['#007AFF', '#5856D6'] as GradientColors; // ✅ PROPER CONVERSION
   }
-  return colors as GradientColors;
+  return colors as GradientColors; // ✅ PROPER CONVERSION
+};
+
+// Transformation and magic effects
+export interface TransformationEffect {
+  type: 'magic' | 'celebration' | 'encouragement';
+  duration: number;
+  shape: ShapeType;
+  message: string;
+}
+
+// Export utility function for proper type handling
+export const ensureGradientColors = (colors: string[] | GradientColors): GradientColors => {
+  return Array.isArray(colors) && colors.length >= 2 
+    ? createGradientColors(colors)
+    : ['#007AFF', '#5856D6'] as GradientColors;
 };

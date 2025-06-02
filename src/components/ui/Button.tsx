@@ -1,26 +1,30 @@
-// src/components/ui/Button.tsx - COMPLETE FILE REPLACEMENT
+// src/components/ui/Button.tsx
 import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  ViewStyle,
-  TextStyle,
+import { 
+  TouchableOpacity, 
+  ViewStyle, 
+  TextStyle, 
   StyleProp,
-  ActivityIndicator,
+  ActivityIndicator 
 } from 'react-native';
-import { Colors } from '@/constants/colors';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '@/context/ThemeContext';
 import { hapticFeedback } from '@/utils/platform/haptics';
+import { AnimatedText } from './AnimatedText';
+import { createGradient } from '@/utils/colors/gradientHelper';
 
 export interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive'; // ✅ ADD DESTRUCTIVE
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
-  // FIXED: Accept style arrays like regular React Native components
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
+  hapticType?: 'light' | 'medium' | 'heavy' | 'selection';
+  fullWidth?: boolean;
+  icon?: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -32,168 +36,194 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   style,
   textStyle,
+  hapticType = 'light',
+  fullWidth = false,
+  icon,
 }) => {
-  const handlePress = () => {
-    if (!disabled && !loading) {
-      hapticFeedback('light');
-      onPress();
+  const { colors, isDark } = useTheme();
+
+  const handlePress = async () => {
+    if (disabled || loading) return;
+    
+    // Trigger haptic feedback
+    await hapticFeedback.trigger(hapticType);
+    onPress();
+  };
+
+  const getButtonStyles = (): StyleProp<ViewStyle> => {
+    const baseStyle: ViewStyle = {
+      borderRadius: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      opacity: disabled ? 0.6 : 1,
+    };
+
+    const sizeStyles: Record<typeof size, ViewStyle> = {
+      small: { paddingVertical: 8, paddingHorizontal: 16, minHeight: 36 },
+      medium: { paddingVertical: 12, paddingHorizontal: 20, minHeight: 44 },
+      large: { paddingVertical: 16, paddingHorizontal: 24, minHeight: 52 },
+    };
+
+    const variantStyles: Record<typeof variant, ViewStyle> = {
+      primary: {},
+      secondary: { backgroundColor: colors.secondary },
+      outline: { 
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderColor: colors.primary,
+      },
+      ghost: { backgroundColor: 'transparent' },
+      destructive: { backgroundColor: '#FF3B30' }, // ✅ ADD DESTRUCTIVE STYLES
+    };
+
+    if (fullWidth) {
+      baseStyle.width = '100%';
     }
+
+    return [baseStyle, sizeStyles[size], variantStyles[variant]];
   };
 
-  const getVariantStyles = (): ViewStyle => {
-    switch (variant) {
-      case 'primary':
-        return {
-          backgroundColor: Colors.light.primary,
-          borderWidth: 0,
-        };
-      case 'secondary':
-        return {
-          backgroundColor: Colors.light.secondary,
-          borderWidth: 0,
-        };
-      case 'outline':
-        return {
-          backgroundColor: 'transparent',
-          borderWidth: 1.5,
-          borderColor: Colors.light.primary,
-        };
-      case 'ghost':
-        return {
-          backgroundColor: 'transparent',
-          borderWidth: 0,
-        };
-      default:
-        return {
-          backgroundColor: Colors.light.primary,
-          borderWidth: 0,
-        };
-    }
+  const getTextStyles = (): StyleProp<TextStyle> => {
+    const sizeStyles: Record<typeof size, TextStyle> = {
+      small: { fontSize: 14, fontWeight: '600' },
+      medium: { fontSize: 16, fontWeight: '600' },
+      large: { fontSize: 18, fontWeight: '700' },
+    };
+
+    const variantStyles: Record<typeof variant, TextStyle> = {
+      primary: { color: '#FFFFFF' },
+      secondary: { color: '#FFFFFF' },
+      outline: { color: colors.primary },
+      ghost: { color: colors.primary },
+      destructive: { color: '#FFFFFF' }, // ✅ ADD DESTRUCTIVE TEXT COLOR
+    };
+
+    return [sizeStyles[size], variantStyles[variant]];
   };
 
-  const getVariantTextStyles = (): TextStyle => {
-    switch (variant) {
-      case 'primary':
-        return {
-          color: '#FFFFFF',
-        };
-      case 'secondary':
-        return {
-          color: '#FFFFFF',
-        };
-      case 'outline':
-        return {
-          color: Colors.light.primary,
-        };
-      case 'ghost':
-        return {
-          color: Colors.light.primary,
-        };
-      default:
-        return {
-          color: '#FFFFFF',
-        };
-    }
-  };
-
-  const getSizeStyles = (): ViewStyle => {
-    switch (size) {
-      case 'small':
-        return {
-          paddingHorizontal: 16,
-          paddingVertical: 8,
-          borderRadius: 8,
-        };
-      case 'medium':
-        return {
-          paddingHorizontal: 24,
-          paddingVertical: 12,
-          borderRadius: 12,
-        };
-      case 'large':
-        return {
-          paddingHorizontal: 32,
-          paddingVertical: 16,
-          borderRadius: 16,
-        };
-      default:
-        return {
-          paddingHorizontal: 24,
-          paddingVertical: 12,
-          borderRadius: 12,
-        };
-    }
-  };
-
-  const getSizeTextStyles = (): TextStyle => {
-    switch (size) {
-      case 'small':
-        return {
-          fontSize: 14,
-          fontWeight: '600',
-        };
-      case 'medium':
-        return {
-          fontSize: 16,
-          fontWeight: '600',
-        };
-      case 'large':
-        return {
-          fontSize: 18,
-          fontWeight: '700',
-        };
-      default:
-        return {
-          fontSize: 16,
-          fontWeight: '600',
-        };
-    }
-  };
-
-  const baseStyles: ViewStyle = {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  };
-
-  const baseTextStyles: TextStyle = {
-    textAlign: 'center',
-  };
-
-  const disabledStyles: ViewStyle = {
-    opacity: 0.6,
-  };
-
-  return (
+  const renderButton = () => (
     <TouchableOpacity
-      style={[
-        baseStyles,
-        getVariantStyles(),
-        getSizeStyles(),
-        disabled && disabledStyles,
-        style, // FIXED: Now properly accepts arrays
-      ]}
+      style={[getButtonStyles(), style]}
       onPress={handlePress}
       disabled={disabled || loading}
       activeOpacity={0.8}
     >
       {loading && (
-        <ActivityIndicator
-          size="small"
-          color={variant === 'outline' || variant === 'ghost' ? Colors.light.primary : '#FFFFFF'}
-          style={{ marginRight: 8 }}
+        <ActivityIndicator 
+          size="small" 
+          color={variant === 'outline' || variant === 'ghost' ? colors.primary : '#FFFFFF'}
+          style={{ marginRight: icon || title ? 8 : 0 }}
         />
       )}
-      <Text
-        style={[
-          baseTextStyles,
-          getVariantTextStyles(),
-          getSizeTextStyles(),
-          textStyle, // FIXED: Now properly accepts arrays
-        ]}
-      >
-        {title}
-      </Text>
+      
+      {icon && !loading && (
+        <>{icon}</>
+      )}
+      
+      {title && (
+        <AnimatedText
+          style={[getTextStyles(), textStyle, { marginLeft: icon && !loading ? 8 : 0 }]}
+          animation="fadeIn"
+        >
+          {title}
+        </AnimatedText>
+      )}
     </TouchableOpacity>
   );
+
+  // Use gradient for primary and destructive variants
+  if (variant === 'primary') {
+    return (
+      <LinearGradient
+        colors={createGradient([colors.primary, colors.secondary])}
+        style={[getButtonStyles(), style]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <TouchableOpacity
+          style={{ 
+            flex: 1, 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            paddingVertical: 0,
+            paddingHorizontal: 0,
+          }}
+          onPress={handlePress}
+          disabled={disabled || loading}
+          activeOpacity={0.8}
+        >
+          {loading && (
+            <ActivityIndicator 
+              size="small" 
+              color="#FFFFFF"
+              style={{ marginRight: icon || title ? 8 : 0 }}
+            />
+          )}
+          
+          {icon && !loading && (
+            <>{icon}</>
+          )}
+          
+          {title && (
+            <AnimatedText
+              style={[getTextStyles(), textStyle, { marginLeft: icon && !loading ? 8 : 0 }]}
+              animation="fadeIn"
+            >
+              {title}
+            </AnimatedText>
+          )}
+        </TouchableOpacity>
+      </LinearGradient>
+    );
+  }
+
+  if (variant === 'destructive') {
+    return (
+      <LinearGradient
+        colors={createGradient(['#FF3B30', '#FF6961'])}
+        style={[getButtonStyles(), style]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <TouchableOpacity
+          style={{ 
+            flex: 1, 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            paddingVertical: 0,
+            paddingHorizontal: 0,
+          }}
+          onPress={handlePress}
+          disabled={disabled || loading}
+          activeOpacity={0.8}
+        >
+          {loading && (
+            <ActivityIndicator 
+              size="small" 
+              color="#FFFFFF"
+              style={{ marginRight: icon || title ? 8 : 0 }}
+            />
+          )}
+          
+          {icon && !loading && (
+            <>{icon}</>
+          )}
+          
+          {title && (
+            <AnimatedText
+              style={[getTextStyles(), textStyle, { marginLeft: icon && !loading ? 8 : 0 }]}
+              animation="fadeIn"
+            >
+              {title}
+            </AnimatedText>
+          )}
+        </TouchableOpacity>
+      </LinearGradient>
+    );
+  }
+
+  return renderButton();
 };

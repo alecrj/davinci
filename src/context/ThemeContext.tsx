@@ -1,96 +1,118 @@
-// CRITICAL FIX 1: src/context/ThemeContext.tsx
-// The issue is that ThemeType is resolving to string "light" instead of full theme object
-
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+// src/context/ThemeContext.tsx
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors } from '@/constants/colors';
+import { COLORS } from '@/constants/colors';
 
-// FIXED: Proper ThemeMode type
-export type ThemeMode = 'light' | 'dark' | 'auto';
-
-// FIXED: Complete theme colors interface
 export interface ColorPalette {
-  readonly text: string;
-  readonly textSecondary: string;
-  readonly textMuted: string;
-  readonly textTertiary: string;
-  readonly background: string;
-  readonly backgroundSecondary: string;
-  readonly border: string;
-  readonly card: string;
-  readonly notification: string;
-  readonly primary: string;
-  readonly secondary: string;
-  readonly accent: string;
-  readonly accentLight: string;
-  readonly success: string;
-  readonly warning: string;
-  readonly error: string;
-  readonly info: string;
-  readonly surface: string;
-  readonly surfaceSecondary: string;
-  readonly overlay: string;
-  readonly shadow: string;
-  readonly drawing: {
-    readonly canvas: string;
-    readonly grid: string;
+  // Text colors
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  textTertiary: string;
+  
+  // Background colors
+  background: string;
+  backgroundSecondary: string;
+  surface: string;
+  surfaceSecondary: string;
+  card: string;
+  
+  // Interactive colors
+  primary: string;
+  secondary: string;
+  tertiary: string;
+  
+  // Status colors
+  success: string;
+  warning: string;
+  error: string;
+  info: string;
+  
+  // UI elements
+  border: string;
+  borderSecondary: string;
+  shadow: string;
+  overlay: string;
+  notification: string;
+  
+  // Drawing specific
+  drawing: {
+    canvas: string;
+    grid: string;
+    guideline: string;
+    preview: string;
   };
 }
 
-// FIXED: Proper theme object interface
 export interface ThemeContextType {
-  mode: ThemeMode;
+  isDark: boolean;
+  theme: ColorPalette;  // ✅ ADD MISSING THEME PROPERTY
   colors: ColorPalette;
-  setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
+  setTheme: (isDark: boolean) => void;
 }
+
+// ✅ ADD MISSING BUTTON VARIANT TYPE
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-interface ThemeProviderProps {
-  children: ReactNode;
-}
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};
 
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [mode, setMode] = useState<ThemeMode>('light');
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const systemColorScheme = useColorScheme();
+  const [isDark, setIsDark] = useState(systemColorScheme === 'dark');
 
+  // Load saved theme preference
   useEffect(() => {
+    const loadTheme = async () => {
+      try {
+        const savedTheme = await AsyncStorage.getItem('theme');
+        if (savedTheme !== null) {
+          setIsDark(savedTheme === 'dark');
+        }
+      } catch (error) {
+        console.warn('Failed to load theme preference:', error);
+      }
+    };
     loadTheme();
   }, []);
 
-  const loadTheme = async () => {
+  // Save theme preference
+  const saveTheme = async (isDarkMode: boolean) => {
     try {
-      const savedTheme = await AsyncStorage.getItem('theme');
-      if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'auto')) {
-        setMode(savedTheme as ThemeMode);
-      }
+      await AsyncStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
     } catch (error) {
-      console.log('Error loading theme:', error);
-    }
-  };
-
-  const setThemeMode = async (newMode: ThemeMode) => {
-    try {
-      await AsyncStorage.setItem('theme', newMode);
-      setMode(newMode);
-    } catch (error) {
-      console.log('Error saving theme:', error);
+      console.warn('Failed to save theme preference:', error);
     }
   };
 
   const toggleTheme = () => {
-    const newMode = mode === 'light' ? 'dark' : 'light';
-    setThemeMode(newMode);
+    const newTheme = !isDark;
+    setIsDark(newTheme);
+    saveTheme(newTheme);
   };
 
-  // FIXED: Return proper color palette based on mode
-  const colors = mode === 'dark' ? Colors.dark : Colors.light;
+  const setTheme = (isDarkMode: boolean) => {
+    setIsDark(isDarkMode);
+    saveTheme(isDarkMode);
+  };
+
+  const colors = isDark ? COLORS.dark : COLORS.light;
 
   const value: ThemeContextType = {
-    mode,
+    isDark,
+    theme: colors,  // ✅ PROVIDE THEME PROPERTY
     colors,
-    setThemeMode,
     toggleTheme,
+    setTheme,
   };
 
   return (
@@ -98,12 +120,4 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       {children}
     </ThemeContext.Provider>
   );
-};
-
-export const useTheme = (): ThemeContextType => {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
 };
