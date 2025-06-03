@@ -1,59 +1,21 @@
-// src/context/ThemeContext.tsx
+// src/context/ThemeContext.tsx - FIXED TO MATCH COMPONENT USAGE
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { COLORS } from '@/constants/colors';
+import { COLORS, ColorPalette } from '@/constants/colors';
 
-export interface ColorPalette {
-  // Text colors
-  text: string;
-  textSecondary: string;
-  textMuted: string;
-  textTertiary: string;
-  
-  // Background colors
-  background: string;
-  backgroundSecondary: string;
-  surface: string;
-  surfaceSecondary: string;
-  card: string;
-  
-  // Interactive colors
-  primary: string;
-  secondary: string;
-  tertiary: string;
-  
-  // Status colors
-  success: string;
-  warning: string;
-  error: string;
-  info: string;
-  
-  // UI elements
-  border: string;
-  borderSecondary: string;
-  shadow: string;
-  overlay: string;
-  notification: string;
-  
-  // Drawing specific
-  drawing: {
-    canvas: string;
-    grid: string;
-    guideline: string;
-    preview: string;
-  };
-}
-
+// ✅ UPDATED INTERFACE TO MATCH COMPONENT EXPECTATIONS
 export interface ThemeContextType {
   isDark: boolean;
-  theme: ColorPalette;  // ✅ ADD MISSING THEME PROPERTY
-  colors: ColorPalette;
+  theme: ColorPalette;
+  colors: ColorPalette['colors']; // ✅ NESTED COLORS OBJECT
+  mode: 'light' | 'dark'; // ✅ ADD MISSING MODE PROPERTY
   toggleTheme: () => void;
   setTheme: (isDark: boolean) => void;
+  setThemeMode: (mode: 'light' | 'dark') => void; // ✅ ADD MISSING FUNCTION
 }
 
-// ✅ ADD MISSING BUTTON VARIANT TYPE
+// ✅ BUTTON VARIANT TYPE FOR UI COMPONENTS
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -105,14 +67,24 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     saveTheme(isDarkMode);
   };
 
-  const colors = isDark ? COLORS.dark : COLORS.light;
+  const setThemeMode = (mode: 'light' | 'dark') => {
+    const isDarkMode = mode === 'dark';
+    setIsDark(isDarkMode);
+    saveTheme(isDarkMode);
+  };
+
+  // ✅ GET THEME COLORS BASED ON MODE
+  const themeColors = isDark ? COLORS.dark : COLORS.light;
+  const mode: 'light' | 'dark' = isDark ? 'dark' : 'light';
 
   const value: ThemeContextType = {
     isDark,
-    theme: colors,  // ✅ PROVIDE THEME PROPERTY
-    colors,
+    theme: themeColors, // ✅ FULL THEME OBJECT
+    colors: themeColors.colors, // ✅ NESTED COLORS OBJECT THAT COMPONENTS EXPECT
+    mode, // ✅ MODE PROPERTY
     toggleTheme,
     setTheme,
+    setThemeMode, // ✅ SET THEME MODE FUNCTION
   };
 
   return (

@@ -1,39 +1,6 @@
-// src/constants/colors.ts - COMPLETE COLOR SYSTEM
+// src/constants/colors.ts - FIXED COLOR SYSTEM TO MATCH COMPONENT USAGE
 export interface ColorPalette {
-  // Text colors
-  text: string;
-  textSecondary: string;
-  textMuted: string;
-  textTertiary: string;
-  
-  // Background colors  
-  background: string;
-  backgroundSecondary: string;
-  surface: string;
-  surfaceSecondary: string;
-  card: string;
-  
-  // Interactive colors
-  primary: string;
-  secondary: string;
-  tertiary: string;
-  accent: string; // ✅ ADD MISSING ACCENT
-  accentLight: string; // ✅ ADD MISSING ACCENT_LIGHT
-  
-  // Status colors
-  success: string;
-  warning: string;
-  error: string;
-  info: string;
-  
-  // UI elements  
-  border: string;
-  borderSecondary: string;
-  shadow: string;
-  overlay: string;
-  notification: string;
-  
-  // ✅ ADD NESTED COLORS OBJECT THAT COMPONENTS EXPECT
+  // ✅ MAIN COLORS OBJECT THAT COMPONENTS EXPECT
   colors: {
     text: string;
     textSecondary: string;
@@ -44,13 +11,42 @@ export interface ColorPalette {
     card: string;
     primary: string;
     secondary: string;
-    accent: string;
-    accentLight: string;
+    tertiary: string;
     success: string;
     warning: string;
     error: string;
+    info: string;
     border: string;
+    borderSecondary: string;
+    shadow: string;
+    overlay: string;
+    notification: string;
   };
+  
+  // ✅ TOP-LEVEL PROPERTIES FOR DIRECT ACCESS
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  textTertiary: string;
+  background: string;
+  backgroundSecondary: string;
+  surface: string;
+  surfaceSecondary: string;
+  card: string;
+  primary: string;
+  secondary: string;
+  tertiary: string;
+  accent: string;
+  accentLight: string;
+  success: string;
+  warning: string;
+  error: string;
+  info: string;
+  border: string;
+  borderSecondary: string;
+  shadow: string;
+  overlay: string;
+  notification: string;
   
   // Drawing specific
   drawing: {
@@ -61,41 +57,8 @@ export interface ColorPalette {
   };
 }
 
-// ✅ COMPLETE COLOR DEFINITIONS
+// ✅ LIGHT THEME COLORS
 const lightColors: ColorPalette = {
-  // Text colors
-  text: '#000000',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  textTertiary: '#D1D5DB',
-  
-  // Background colors
-  background: '#FFFFFF',
-  backgroundSecondary: '#F9FAFB',
-  surface: '#FFFFFF',
-  surfaceSecondary: '#F3F4F6',
-  card: '#FFFFFF',
-  
-  // Interactive colors
-  primary: '#007AFF',
-  secondary: '#5856D6',
-  tertiary: '#FF9500',
-  accent: '#007AFF', // ✅ ACCENT COLOR
-  accentLight: '#E3F2FD', // ✅ ACCENT LIGHT
-  
-  // Status colors
-  success: '#34C759',
-  warning: '#FF9500', 
-  error: '#FF3B30',
-  info: '#5AC8FA',
-  
-  // UI elements
-  border: '#E5E5EA',
-  borderSecondary: '#D1D1D6',
-  shadow: '#000000',
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  notification: '#FF3B30',
-  
   // ✅ NESTED COLORS OBJECT FOR COMPONENT COMPATIBILITY
   colors: {
     text: '#000000',
@@ -107,15 +70,44 @@ const lightColors: ColorPalette = {
     card: '#FFFFFF',
     primary: '#007AFF',
     secondary: '#5856D6',
+    tertiary: '#FF9500',
     accent: '#007AFF',
-    accentLight: '#E3F2FD',
     success: '#34C759',
     warning: '#FF9500',
     error: '#FF3B30',
+    info: '#5AC8FA',
     border: '#E5E5EA',
+    borderSecondary: '#D1D1D6',
+    shadow: '#000000',
+    overlay: 'rgba(0, 0, 0, 0.5)',
+    notification: '#FF3B30',
   },
   
-  // Drawing specific
+  // ✅ TOP-LEVEL PROPERTIES (SAME VALUES)
+  text: '#000000',
+  textSecondary: '#6B7280',
+  textMuted: '#9CA3AF',
+  textTertiary: '#D1D5DB',
+  background: '#FFFFFF',
+  backgroundSecondary: '#F9FAFB',
+  surface: '#FFFFFF',
+  surfaceSecondary: '#F3F4F6',
+  card: '#FFFFFF',
+  primary: '#007AFF',
+  secondary: '#5856D6',
+  tertiary: '#FF9500',
+  accent: '#007AFF',
+  accentLight: '#E3F2FD',
+  success: '#34C759',
+  warning: '#FF9500',
+  error: '#FF3B30',
+  info: '#5AC8FA',
+  border: '#E5E5EA',
+  borderSecondary: '#D1D1D6',
+  shadow: '#000000',
+  overlay: 'rgba(0, 0, 0, 0.5)',
+  notification: '#FF3B30',
+  
   drawing: {
     canvas: '#FFFFFF',
     grid: '#F0F0F0',
@@ -124,40 +116,8 @@ const lightColors: ColorPalette = {
   },
 };
 
+// ✅ DARK THEME COLORS
 const darkColors: ColorPalette = {
-  // Text colors
-  text: '#FFFFFF',
-  textSecondary: '#A1A1AA',
-  textMuted: '#71717A', 
-  textTertiary: '#52525B',
-  
-  // Background colors
-  background: '#000000',
-  backgroundSecondary: '#111111',
-  surface: '#1C1C1E',
-  surfaceSecondary: '#2C2C2E',
-  card: '#1C1C1E',
-  
-  // Interactive colors
-  primary: '#0A84FF',
-  secondary: '#5E5CE6',
-  tertiary: '#FF9F0A',
-  accent: '#0A84FF', // ✅ ACCENT COLOR
-  accentLight: '#1E3A8A', // ✅ ACCENT LIGHT (DARKER IN DARK MODE)
-  
-  // Status colors
-  success: '#30D158',
-  warning: '#FF9F0A',
-  error: '#FF453A',
-  info: '#64D2FF',
-  
-  // UI elements
-  border: '#38383A',
-  borderSecondary: '#48484A',
-  shadow: '#000000',
-  overlay: 'rgba(0, 0, 0, 0.7)',
-  notification: '#FF453A',
-  
   // ✅ NESTED COLORS OBJECT FOR COMPONENT COMPATIBILITY
   colors: {
     text: '#FFFFFF',
@@ -169,15 +129,44 @@ const darkColors: ColorPalette = {
     card: '#1C1C1E',
     primary: '#0A84FF',
     secondary: '#5E5CE6',
+    tertiary: '#FF9F0A',
     accent: '#0A84FF',
-    accentLight: '#1E3A8A',
     success: '#30D158',
     warning: '#FF9F0A',
     error: '#FF453A',
+    info: '#64D2FF',
     border: '#38383A',
+    borderSecondary: '#48484A',
+    shadow: '#000000',
+    overlay: 'rgba(0, 0, 0, 0.7)',
+    notification: '#FF453A',
   },
   
-  // Drawing specific
+  // ✅ TOP-LEVEL PROPERTIES (SAME VALUES)
+  text: '#FFFFFF',
+  textSecondary: '#A1A1AA',
+  textMuted: '#71717A',
+  textTertiary: '#52525B',
+  background: '#000000',
+  backgroundSecondary: '#111111',
+  surface: '#1C1C1E',
+  surfaceSecondary: '#2C2C2E',
+  card: '#1C1C1E',
+  primary: '#0A84FF',
+  secondary: '#5E5CE6',
+  tertiary: '#FF9F0A',
+  accent: '#0A84FF',
+  accentLight: '#1E3A8A',
+  success: '#30D158',
+  warning: '#FF9F0A',
+  error: '#FF453A',
+  info: '#64D2FF',
+  border: '#38383A',
+  borderSecondary: '#48484A',
+  shadow: '#000000',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  notification: '#FF453A',
+  
   drawing: {
     canvas: '#1C1C1E',
     grid: '#2C2C2E',
@@ -200,7 +189,6 @@ export const Colors = {
     tint: lightColors.primary,
     tabIconDefault: lightColors.textMuted,
     tabIconSelected: lightColors.primary,
-    colors: lightColors.colors,
   },
   dark: {
     text: darkColors.text,
@@ -208,7 +196,6 @@ export const Colors = {
     tint: darkColors.primary,
     tabIconDefault: darkColors.textMuted,
     tabIconSelected: darkColors.primary,
-    colors: darkColors.colors,
   },
 };
 

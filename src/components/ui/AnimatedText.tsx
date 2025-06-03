@@ -1,129 +1,183 @@
-// src/components/ui/AnimatedText.tsx
-import React, { useEffect } from 'react';
-import { TextProps, StyleProp, TextStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  withSpring,
-  withSequence,
-  withDelay,
-  Easing,
-} from 'react-native-reanimated';
+// src/components/ui/AnimatedText.tsx - SUPPORTS BOTH text AND children
+import React, { useEffect, useRef } from 'react';
+import { Text, TextStyle, Animated } from 'react-native';
+import { AnimationType } from '@/types/navigation';
 
-export type AnimationType = 
-  | 'fadeIn'
-  | 'fadeInUp'
-  | 'fadeInDown'
-  | 'slideInLeft'
-  | 'slideInRight'
-  | 'bounceIn'
-  | 'scaleIn'
-  | 'none';
-
-interface AnimatedTextProps extends Omit<TextProps, 'style'> {
-  children?: React.ReactNode;
-  text?: string; // ✅ ADD MISSING TEXT PROP
-  style?: StyleProp<TextStyle>;
+export interface AnimatedTextProps {
+  text?: string; // ✅ OPTIONAL text prop
+  children?: React.ReactNode; // ✅ SUPPORT children prop
+  style?: TextStyle | TextStyle[]; // ✅ SUPPORT STYLE ARRAYS
   animation?: AnimationType;
-  delay?: number;
   duration?: number;
+  delay?: number;
+  onAnimationComplete?: () => void;
 }
 
 export const AnimatedText: React.FC<AnimatedTextProps> = ({
+  text,
   children,
-  text, // ✅ SUPPORT TEXT PROP
   style,
-  animation = 'none',
+  animation = 'fadeIn',
+  duration = 1000,
   delay = 0,
-  duration = 300,
-  ...textProps
+  onAnimationComplete,
 }) => {
-  // Animation values
-  const opacity = useSharedValue(animation === 'none' ? 1 : 0);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const scale = useSharedValue(animation === 'none' ? 1 : 0);
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  // ✅ USE text prop OR children - whatever is provided
+  const displayContent = text || children;
 
   useEffect(() => {
-    if (animation === 'none') return;
+    // Reset values
+    animatedValue.setValue(0);
+    translateY.setValue(0);
+    translateX.setValue(0);
+    scale.setValue(1);
 
-    const startAnimation = () => {
-      switch (animation) {
-        case 'fadeIn':
-          opacity.value = withDelay(delay, withTiming(1, { duration }));
-          break;
+    // Set initial values based on animation type
+    switch (animation) {
+      case 'fadeInUp':
+        translateY.setValue(30);
+        break;
+      case 'fadeInDown':
+      case 'slideInDown':
+        translateY.setValue(-30);
+        break;
+      case 'fadeInLeft':
+      case 'slideInLeft':
+        translateX.setValue(-30);
+        break;
+      case 'fadeInRight':
+      case 'slideInRight':
+        translateX.setValue(30);
+        break;
+      case 'slideInUp':
+        translateY.setValue(30);
+        break;
+      case 'zoomIn':
+        scale.setValue(0.5);
+        break;
+      case 'bounceIn':
+        scale.setValue(0);
+        break;
+    }
 
-        case 'fadeInUp':
-          translateY.value = 20;
-          opacity.value = 0;
-          opacity.value = withDelay(delay, withTiming(1, { duration }));
-          translateY.value = withDelay(delay, withTiming(0, { duration }));
-          break;
+    // Start animation after delay
+    const timer = setTimeout(() => {
+      const animations: Animated.CompositeAnimation[] = [];
 
-        case 'fadeInDown':
-          translateY.value = -20;
-          opacity.value = 0;
-          opacity.value = withDelay(delay, withTiming(1, { duration }));
-          translateY.value = withDelay(delay, withTiming(0, { duration }));
-          break;
-
-        case 'slideInLeft': // ✅ ADD MISSING ANIMATION TYPE
-          translateX.value = -50;
-          opacity.value = 0;
-          opacity.value = withDelay(delay, withTiming(1, { duration }));
-          translateX.value = withDelay(delay, withTiming(0, { 
-            duration, 
-            easing: Easing.out(Easing.quad) 
-          }));
-          break;
-
-        case 'slideInRight':
-          translateX.value = 50;
-          opacity.value = 0;
-          opacity.value = withDelay(delay, withTiming(1, { duration }));
-          translateX.value = withDelay(delay, withTiming(0, { duration }));
-          break;
-
-        case 'bounceIn':
-          scale.value = 0;
-          opacity.value = 0;
-          opacity.value = withDelay(delay, withTiming(1, { duration: duration / 2 }));
-          scale.value = withDelay(delay, withSequence(
-            withTiming(1.2, { duration: duration / 2 }),
-            withSpring(1, { damping: 8, stiffness: 100 })
-          ));
-          break;
-
-        case 'scaleIn':
-          scale.value = 0;
-          opacity.value = 0;
-          opacity.value = withDelay(delay, withTiming(1, { duration }));
-          scale.value = withDelay(delay, withSpring(1, { damping: 10, stiffness: 100 }));
-          break;
+      // Fade animations
+      if (animation.includes('fade') || animation.includes('slide') || animation === 'zoomIn' || animation === 'bounceIn') {
+        animations.push(
+          Animated.timing(animatedValue, {
+            toValue: 1,
+            duration,
+            useNativeDriver: true,
+          })
+        );
       }
-    };
 
-    startAnimation();
-  }, [animation, delay, duration]);
+      // Transform animations
+      if (animation.includes('Up') || animation.includes('Down')) {
+        animations.push(
+          Animated.timing(translateY, {
+            toValue: 0,
+            duration,
+            useNativeDriver: true,
+          })
+        );
+      }
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: opacity.value,
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-        { scale: scale.value },
-      ],
-    };
-  });
+      if (animation.includes('Left') || animation.includes('Right')) {
+        animations.push(
+          Animated.timing(translateX, {
+            toValue: 0,
+            duration,
+            useNativeDriver: true,
+          })
+        );
+      }
+
+      if (animation === 'zoomIn' || animation === 'bounceIn') {
+        animations.push(
+          Animated.timing(scale, {
+            toValue: 1,
+            duration,
+            useNativeDriver: true,
+          })
+        );
+      }
+
+      // Special animations
+      if (animation === 'pulse') {
+        const pulseAnimation = Animated.loop(
+          Animated.sequence([
+            Animated.timing(scale, {
+              toValue: 1.1,
+              duration: duration / 2,
+              useNativeDriver: true,
+            }),
+            Animated.timing(scale, {
+              toValue: 1,
+              duration: duration / 2,
+              useNativeDriver: true,
+            }),
+          ])
+        );
+        pulseAnimation.start();
+        return;
+      }
+
+      if (animation === 'shake') {
+        const shakeAnimation = Animated.loop(
+          Animated.sequence([
+            Animated.timing(translateX, {
+              toValue: 10,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateX, {
+              toValue: -10,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(translateX, {
+              toValue: 0,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+          ]),
+          { iterations: 3 }
+        );
+        shakeAnimation.start(onAnimationComplete);
+        return;
+      }
+
+      // Run parallel animations
+      Animated.parallel(animations).start(onAnimationComplete);
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [displayContent, animation, duration, delay]);
+
+  const animatedStyle = {
+    opacity: animation === 'pulse' || animation === 'shake' ? 1 : animatedValue,
+    transform: [
+      { translateY },
+      { translateX },
+      { scale },
+    ],
+  };
+
+  // ✅ HANDLE STYLE ARRAYS
+  const flatStyle = Array.isArray(style) ? style : [style];
 
   return (
-    <Animated.Text 
-      style={[animatedStyle, style]} 
-      {...textProps}
-    >
-      {text || children} {/* ✅ SUPPORT BOTH TEXT PROP AND CHILDREN */}
+    <Animated.Text style={[...flatStyle, animatedStyle]}>
+      {displayContent}
     </Animated.Text>
   );
 };

@@ -1,58 +1,44 @@
-// src/utils/colors/gradientHelper.ts
+// src/utils/colors/gradientHelper.ts - FIXED GRADIENT TYPE CONVERSION
+
 import { ColorValue } from 'react-native';
+import { GradientColors } from '@/types/drawing';
 
-/**
- * Type-safe helper to convert string arrays to LinearGradient-compatible readonly arrays
- */
-export type GradientColors = readonly [ColorValue, ColorValue, ...ColorValue[]];
-
-export const createGradient = (colors: string[]): GradientColors => {
+// ✅ SAFE GRADIENT COLOR CONVERSION
+export const createGradientColors = (colors: string[]): GradientColors => {
+  // Ensure we have at least 2 colors
   if (colors.length < 2) {
-    throw new Error('Gradient must have at least 2 colors');
+    return ['#007AFF', '#5856D6'] as const;
   }
-  return colors as GradientColors;
+  
+  // Convert to readonly tuple type
+  return [colors[0] as ColorValue, colors[1] as ColorValue, ...colors.slice(2) as ColorValue[]] as const;
 };
 
-/**
- * Common gradient color combinations for the app
- */
-export const GRADIENTS = {
-  primary: createGradient(['#007AFF', '#5856D6']),
-  secondary: createGradient(['#FF9500', '#FF6B35']),
-  success: createGradient(['#34C759', '#30D158']),
-  warning: createGradient(['#FF9500', '#FFD60A']),
-  error: createGradient(['#FF3B30', '#FF6961']),
+// ✅ SAFE CONVERSION FROM ANY ARRAY
+export const ensureGradientColors = (colors: any): GradientColors => {
+  if (Array.isArray(colors) && colors.length >= 2) {
+    return createGradientColors(colors.map(c => String(c)));
+  }
   
-  // Skill level gradients
-  beginner: createGradient(['#34C759', '#30D158']),
-  intermediate: createGradient(['#FF9500', '#FFD60A']),
-  advanced: createGradient(['#FF3B30', '#FF6961']),
-  
-  // Theme-aware gradients
-  light: {
-    card: createGradient(['#FFFFFF', '#F2F2F7']),
-    surface: createGradient(['#F2F2F7', '#E5E5EA']),
-  },
-  dark: {
-    card: createGradient(['#1C1C1E', '#2C2C2E']),
-    surface: createGradient(['#2C2C2E', '#3A3A3C']),
-  },
+  // Default gradient
+  return ['#007AFF', '#5856D6'] as const;
+};
+
+// ✅ PREDEFINED GRADIENT SETS
+export const gradientPresets = {
+  primary: ['#007AFF', '#5856D6'] as const,
+  success: ['#34C759', '#30D158'] as const,
+  warning: ['#FF9500', '#FF9F0A'] as const,
+  error: ['#FF3B30', '#FF453A'] as const,
+  purple: ['#5856D6', '#5E5CE6'] as const,
+  blue: ['#007AFF', '#0A84FF'] as const,
+  red: ['#FF3B30', '#FF453A'] as const,
+  green: ['#34C759', '#30D158'] as const,
+  orange: ['#FF9500', '#FF9F0A'] as const,
+  pink: ['#FF2D92', '#FF6EC7'] as const,
 } as const;
 
-/**
- * Helper to get theme-aware gradient colors
- */
-export const getThemeGradient = (isDark: boolean, type: 'card' | 'surface'): GradientColors => {
-  return isDark ? GRADIENTS.dark[type] : GRADIENTS.light[type];
-};
-
-/**
- * Helper to safely convert any color array to gradient format
- */
-export const safeGradient = (colors: string[] | readonly string[]): GradientColors => {
-  const colorArray = Array.isArray(colors) ? colors : [colors[0], colors[1]];
-  if (colorArray.length < 2) {
-    return createGradient(['#007AFF', '#5856D6']); // fallback gradient
-  }
-  return createGradient(colorArray);
+// ✅ HELPER TO GET GRADIENT BY NAME
+export const getGradient = (name: keyof typeof gradientPresets): GradientColors => {
+  return gradientPresets[name];
 };

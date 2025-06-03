@@ -1,8 +1,8 @@
-// src/components/EditScreenInfo.tsx
+// src/components/EditScreenInfo.tsx - FIXED IMPORT PATHS
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { ExternalLink } from './ExternalLink';
-import { MonoText } from './StyledText';
+import { ExternalLink } from './ui/ExternalLink'; // ✅ CORRECT PATH
+import { MonoText } from './ui/StyledText'; // ✅ CORRECT PATH
 import { Text, View } from './Themed';
 
 export default function EditScreenInfo({ path }: { path: string }) {

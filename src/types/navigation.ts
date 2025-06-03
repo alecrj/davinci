@@ -1,47 +1,102 @@
-// src/types/navigation.ts - ROUTER TYPE FIXES
+// src/types/navigation.ts - SAFE NAVIGATION UTILITIES
 import { router } from 'expo-router';
 
-// ✅ SAFE ROUTER NAVIGATION HELPER
+// ✅ SAFE NAVIGATION FUNCTIONS TO PREVENT TYPE ERRORS
 export const safeNavigate = {
+  // Tab navigation
+  toHome: () => router.push('/(tabs)/'),
+  toPractice: () => router.push('/(tabs)/practice'),
+  toProgress: () => router.push('/(tabs)/progress'),
+  toProfile: () => router.push('/(tabs)/profile'),
+  
+  // Lesson navigation (safe dynamic routes)
   toLesson: (lessonId: string) => {
-    // Navigate to lessons directory with lessonId as query param instead of dynamic route
-    router.push({
-      pathname: '/lessons/complete',
-      params: { lessonId }
-    } as any);
+    // For now, navigate to practice until lesson routes are implemented
+    router.push('/(tabs)/practice');
   },
+  toLessonComplete: () => router.push('/lessons/complete'),
+  toLessonFeedback: () => router.push('/lessons/feedback'),
   
-  toLessons: () => {
-    router.push('/lessons/complete' as any);
-  },
+  // Assessment navigation
+  toAssessment: () => router.push('/assessment/'),
+  toAssessmentQuestions: () => router.push('/assessment/questions'),
+  toAssessmentDrawingTest: () => router.push('/assessment/drawing-test'),
+  toAssessmentResults: () => router.push('/assessment/results'),
   
-  toBasicShapes: () => {
-    router.push('/lessons/complete' as any);
-  },
+  // Onboarding navigation
+  toOnboardingDrawAnything: () => router.push('/onboarding/draw-anything'),
+  toOnboardingPermissions: () => router.push('/onboarding/permissions'),
   
-  toAssessment: () => {
-    router.push('/assessment' as any);
-  },
+  // Social navigation
+  toSocialGallery: () => router.push('/social/gallery'),
+  toSocialChallenges: () => router.push('/social/challenges'),
+  toSocialShare: () => router.push('/social/share'),
   
-  toOnboarding: () => {
-    router.push('/onboarding/draw-anything' as any);
-  },
+  // Subscription navigation
+  toSubscriptionPlans: () => router.push('/subscription/plans'),
+  toSubscriptionManage: () => router.push('/subscription/manage'),
+  toSubscriptionSuccess: () => router.push('/subscription/success'),
   
-  toTabs: () => {
-    router.push('/(tabs)' as any);
-  },
+  // Modal navigation
+  toModal: () => router.push('/modal'),
   
-  back: () => {
-    router.back();
-  },
+  // Admin navigation
+  toAdminAnalytics: () => router.push('/admin/analytics'),
+  toAdminDebug: () => router.push('/admin/debug'),
+  toAdminPerformance: () => router.push('/admin/performance'),
   
+  // Back navigation
+  back: () => router.back(),
+  canGoBack: () => router.canGoBack(),
+  
+  // Replace navigation (for login flows)
   replace: (path: string) => {
-    router.replace(path as any);
-  }
+    // Only allow safe paths
+    const safePaths = [
+      '/(tabs)/',
+      '/onboarding/draw-anything',
+      '/assessment/',
+    ];
+    
+    if (safePaths.includes(path)) {
+      router.replace(path as any);
+    } else {
+      router.replace('/(tabs)/');
+    }
+  },
 };
 
-// ✅ LESSON ROUTING HELPER - SAFER APPROACH
-export const navigateToLesson = (lessonId: string) => {
-  // For now, navigate to the lessons index and handle lesson selection there
-  router.push('/lessons/complete' as any);
+// ✅ ANIMATION TYPES FOR ANIMATED TEXT COMPONENT
+export type AnimationType = 
+  | 'fadeIn'
+  | 'fadeInUp'
+  | 'fadeInDown'
+  | 'fadeInLeft'
+  | 'fadeInRight'
+  | 'slideInUp'
+  | 'slideInDown'
+  | 'slideInLeft'
+  | 'slideInRight'
+  | 'zoomIn'
+  | 'bounceIn'
+  | 'pulse'
+  | 'shake';
+
+// ✅ NAVIGATION UTILITIES
+export const navigationUtils = {
+  // Get current route name
+  getCurrentRoute: () => {
+    // This would need to be implemented with navigation state
+    return 'home';
+  },
+  
+  // Check if on specific tab
+  isOnTab: (tabName: string) => {
+    return false; // Placeholder
+  },
+  
+  // Get tab index
+  getTabIndex: () => {
+    return 0; // Placeholder
+  },
 };
