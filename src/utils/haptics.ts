@@ -1,8 +1,8 @@
-// src/utils/platform/haptics.ts - FIXED PLATFORM HAPTICS
+// src/utils/haptics.ts - COMPLETE HAPTICS SYSTEM
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 
-// ✅ PROPER HAPTIC FEEDBACK EXPORT
+// ✅ COMPLETE HAPTICS API WITH ALL EXPECTED FUNCTIONS
 export const hapticFeedback = {
   light: async () => {
     if (Platform.OS === 'web') return;
@@ -67,7 +67,7 @@ export const hapticFeedback = {
     }
   },
 
-  // ✅ ADD TRIGGER METHOD THAT COMPONENTS EXPECT
+  // ✅ ADD MISSING TRIGGER METHOD WITH TYPE PARAMETER
   trigger: async (type: 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error' | 'selection') => {
     switch (type) {
       case 'light': return hapticFeedback.light();
@@ -82,7 +82,7 @@ export const hapticFeedback = {
   },
 };
 
-// ✅ UI HAPTICS FOR TABS AND BUTTONS
+// ✅ ADD UI HAPTICS FOR TAB NAVIGATION
 export const uiHaptics = {
   light: async () => {
     if (Platform.OS === 'web') return;
@@ -147,7 +147,7 @@ export const uiHaptics = {
     }
   },
 
-  // ✅ SPECIFIC METHODS COMPONENTS EXPECT
+  // ✅ ADD MISSING TAB-SPECIFIC HAPTICS  
   tabSelection: async () => {
     if (Platform.OS === 'web') return;
     try {
@@ -175,3 +175,36 @@ export const uiHaptics = {
     }
   },
 };
+
+// ✅ ADD SIMPLE TRIGGER HAPTIC FUNCTION
+export const triggerHaptic = async (type: 'impact' | 'success' | 'warning' | 'error' | 'selection') => {
+  if (Platform.OS === 'web') return;
+  
+  try {
+    switch (type) {
+      case 'impact':
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        break;
+      case 'success':
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        break;
+      case 'warning':
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        break;
+      case 'error':
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        break;
+      case 'selection':
+        await Haptics.selectionAsync();
+        break;
+      default:
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  } catch (error) {
+    console.warn('Haptic feedback failed:', error);
+  }
+};
+
+// Export all for backward compatibility
+export { hapticFeedback as default };
+export default hapticFeedback;

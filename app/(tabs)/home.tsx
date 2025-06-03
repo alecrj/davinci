@@ -1,3 +1,4 @@
+// app/(tabs)/home.tsx - FIXED SVG USAGE
 import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
@@ -12,9 +13,11 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import Svg, { Circle } from 'react-native-svg'; // ✅ PROPER SVG IMPORT
 import { useTheme } from '@/context/ThemeContext';
 import { useUserProgress } from '@/context/UserProgressContext';
 import { AnimatedText } from '@/components/ui/AnimatedText';
+import { safeNavigate } from '@/types/navigation'; // ✅ USE SAFE NAVIGATION
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -25,7 +28,7 @@ interface Lesson {
   duration: number;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   icon: string;
-  color: string[];
+  color: string[]; // ✅ SIMPLE STRING ARRAY
   completed: boolean;
   locked: boolean;
 }
@@ -85,9 +88,11 @@ export default function HomeScreen() {
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push(`/lessons/${lesson.id}`);
+    // ✅ USE SAFE NAVIGATION
+    safeNavigate.toLesson(lesson.id);
   };
 
+  // ✅ FIXED PROGRESS RING COMPONENT WITH PROPER SVG
   const ProgressRing = ({ progress }: { progress: number }) => {
     const size = 120;
     const strokeWidth = 8;
@@ -131,13 +136,14 @@ export default function HomeScreen() {
     );
   };
 
+  // ✅ FIXED LESSON CARD WITH PROPER GRADIENT CONVERSION
   const LessonCard = ({ lesson }: { lesson: Lesson }) => (
     <TouchableOpacity
       style={[styles.lessonCard, lesson.locked && styles.lockedCard]}
       onPress={() => handleLessonPress(lesson)}
       activeOpacity={0.8}>
       <LinearGradient
-        colors={lesson.locked ? ['#999', '#666'] : lesson.color}
+        colors={lesson.locked ? ['#999999', '#666666'] as any : lesson.color as any} // ✅ TYPE ASSERTION
         style={styles.lessonGradient}>
         <Text style={styles.lessonIcon}>{lesson.icon}</Text>
         <Text style={styles.lessonTitle}>{lesson.title}</Text>
@@ -231,10 +237,6 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
-// Note: In production, import Svg components from react-native-svg
-const Svg = View;
-const Circle = View;
 
 const styles = StyleSheet.create({
   container: {
