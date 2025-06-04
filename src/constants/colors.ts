@@ -1,21 +1,33 @@
-// src/constants/colors.ts - FIXED COLOR SYSTEM TO MATCH COMPONENT USAGE
+// src/constants/colors.ts - COMPLETE FILE WITH ACCENT PROPERTIES
+
 export interface ColorPalette {
-  // ✅ MAIN COLORS OBJECT THAT COMPONENTS EXPECT
+  // ✅ COMPLETE NESTED COLORS OBJECT (what components access via colors.property)
   colors: {
+    // Text colors
     text: string;
     textSecondary: string;
     textTertiary: string;
+    
+    // Background colors
     background: string;
     backgroundSecondary: string;
     surface: string;
     card: string;
+    
+    // Brand colors
     primary: string;
     secondary: string;
     tertiary: string;
+    accent: string; // ✅ FIXED: Added for colors.accent
+    accentLight: string; // ✅ FIXED: Added for colors.accentLight
+    
+    // Semantic colors
     success: string;
     warning: string;
     error: string;
     info: string;
+    
+    // UI colors
     border: string;
     borderSecondary: string;
     shadow: string;
@@ -23,7 +35,7 @@ export interface ColorPalette {
     notification: string;
   };
   
-  // ✅ TOP-LEVEL PROPERTIES FOR DIRECT ACCESS
+  // ✅ TOP-LEVEL PROPERTIES (for theme.property access)
   text: string;
   textSecondary: string;
   textMuted: string;
@@ -57,9 +69,9 @@ export interface ColorPalette {
   };
 }
 
-// ✅ LIGHT THEME COLORS
+// ✅ LIGHT THEME COLORS - Complete implementation
 const lightColors: ColorPalette = {
-  // ✅ NESTED COLORS OBJECT FOR COMPONENT COMPATIBILITY
+  // ✅ NESTED COLORS OBJECT (accessed via colors.property)
   colors: {
     text: '#000000',
     textSecondary: '#6B7280',
@@ -71,7 +83,8 @@ const lightColors: ColorPalette = {
     primary: '#007AFF',
     secondary: '#5856D6',
     tertiary: '#FF9500',
-    accent: '#007AFF',
+    accent: '#007AFF', // ✅ FIXED: Now available as colors.accent
+    accentLight: '#E3F2FD', // ✅ FIXED: Now available as colors.accentLight
     success: '#34C759',
     warning: '#FF9500',
     error: '#FF3B30',
@@ -83,7 +96,7 @@ const lightColors: ColorPalette = {
     notification: '#FF3B30',
   },
   
-  // ✅ TOP-LEVEL PROPERTIES (SAME VALUES)
+  // ✅ TOP-LEVEL PROPERTIES (same values, accessed via theme.property)
   text: '#000000',
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
@@ -116,9 +129,9 @@ const lightColors: ColorPalette = {
   },
 };
 
-// ✅ DARK THEME COLORS
+// ✅ DARK THEME COLORS - Complete implementation
 const darkColors: ColorPalette = {
-  // ✅ NESTED COLORS OBJECT FOR COMPONENT COMPATIBILITY
+  // ✅ NESTED COLORS OBJECT (accessed via colors.property)
   colors: {
     text: '#FFFFFF',
     textSecondary: '#A1A1AA',
@@ -130,7 +143,8 @@ const darkColors: ColorPalette = {
     primary: '#0A84FF',
     secondary: '#5E5CE6',
     tertiary: '#FF9F0A',
-    accent: '#0A84FF',
+    accent: '#0A84FF', // ✅ FIXED: Now available as colors.accent
+    accentLight: '#1E3A8A', // ✅ FIXED: Now available as colors.accentLight
     success: '#30D158',
     warning: '#FF9F0A',
     error: '#FF453A',
@@ -142,7 +156,7 @@ const darkColors: ColorPalette = {
     notification: '#FF453A',
   },
   
-  // ✅ TOP-LEVEL PROPERTIES (SAME VALUES)
+  // ✅ TOP-LEVEL PROPERTIES (same values, accessed via theme.property)
   text: '#FFFFFF',
   textSecondary: '#A1A1AA',
   textMuted: '#71717A',

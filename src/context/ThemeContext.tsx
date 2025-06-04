@@ -1,18 +1,19 @@
-// src/context/ThemeContext.tsx - FIXED TO MATCH COMPONENT USAGE
+// src/context/ThemeContext.tsx - COMPLETE FILE WITH AUTO MODE
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, ColorPalette } from '@/constants/colors';
 
-// ✅ UPDATED INTERFACE TO MATCH COMPONENT EXPECTATIONS
+// ✅ UPDATED INTERFACE WITH AUTO MODE
 export interface ThemeContextType {
   isDark: boolean;
   theme: ColorPalette;
   colors: ColorPalette['colors']; // ✅ NESTED COLORS OBJECT
-  mode: 'light' | 'dark'; // ✅ ADD MISSING MODE PROPERTY
+  mode: 'light' | 'dark' | 'auto'; // ✅ FIXED: Added 'auto' mode
   toggleTheme: () => void;
   setTheme: (isDark: boolean) => void;
-  setThemeMode: (mode: 'light' | 'dark') => void; // ✅ ADD MISSING FUNCTION
+  setThemeMode: (mode: 'light' | 'dark' | 'auto') => void; // ✅ FIXED: Added 'auto' mode
 }
 
 // ✅ BUTTON VARIANT TYPE FOR UI COMPONENTS
@@ -31,26 +32,41 @@ export const useTheme = () => {
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const systemColorScheme = useColorScheme();
   const [isDark, setIsDark] = useState(systemColorScheme === 'dark');
+  const [themeMode, setThemeModeState] = useState<'light' | 'dark' | 'auto'>('auto');
 
   // Load saved theme preference
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        const savedTheme = await AsyncStorage.getItem('theme');
-        if (savedTheme !== null) {
-          setIsDark(savedTheme === 'dark');
+        const savedMode = await AsyncStorage.getItem('themeMode');
+        if (savedMode && ['light', 'dark', 'auto'].includes(savedMode)) {
+          const mode = savedMode as 'light' | 'dark' | 'auto';
+          setThemeModeState(mode);
+          
+          if (mode === 'auto') {
+            setIsDark(systemColorScheme === 'dark');
+          } else {
+            setIsDark(mode === 'dark');
+          }
         }
       } catch (error) {
         console.warn('Failed to load theme preference:', error);
       }
     };
     loadTheme();
-  }, []);
+  }, [systemColorScheme]);
+
+  // Update theme when system changes in auto mode
+  useEffect(() => {
+    if (themeMode === 'auto') {
+      setIsDark(systemColorScheme === 'dark');
+    }
+  }, [systemColorScheme, themeMode]);
 
   // Save theme preference
-  const saveTheme = async (isDarkMode: boolean) => {
+  const saveThemeMode = async (mode: 'light' | 'dark' | 'auto') => {
     try {
-      await AsyncStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+      await AsyncStorage.setItem('themeMode', mode);
     } catch (error) {
       console.warn('Failed to save theme preference:', error);
     }
@@ -59,29 +75,37 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleTheme = () => {
     const newTheme = !isDark;
     setIsDark(newTheme);
-    saveTheme(newTheme);
+    const newMode = newTheme ? 'dark' : 'light';
+    setThemeModeState(newMode);
+    saveThemeMode(newMode);
   };
 
   const setTheme = (isDarkMode: boolean) => {
     setIsDark(isDarkMode);
-    saveTheme(isDarkMode);
+    const newMode = isDarkMode ? 'dark' : 'light';
+    setThemeModeState(newMode);
+    saveThemeMode(newMode);
   };
 
-  const setThemeMode = (mode: 'light' | 'dark') => {
-    const isDarkMode = mode === 'dark';
-    setIsDark(isDarkMode);
-    saveTheme(isDarkMode);
+  const setThemeMode = (mode: 'light' | 'dark' | 'auto') => {
+    setThemeModeState(mode);
+    saveThemeMode(mode);
+    
+    if (mode === 'auto') {
+      setIsDark(systemColorScheme === 'dark');
+    } else {
+      setIsDark(mode === 'dark');
+    }
   };
 
   // ✅ GET THEME COLORS BASED ON MODE
   const themeColors = isDark ? COLORS.dark : COLORS.light;
-  const mode: 'light' | 'dark' = isDark ? 'dark' : 'light';
 
   const value: ThemeContextType = {
     isDark,
     theme: themeColors, // ✅ FULL THEME OBJECT
     colors: themeColors.colors, // ✅ NESTED COLORS OBJECT THAT COMPONENTS EXPECT
-    mode, // ✅ MODE PROPERTY
+    mode: themeMode, // ✅ CURRENT MODE (light/dark/auto)
     toggleTheme,
     setTheme,
     setThemeMode, // ✅ SET THEME MODE FUNCTION

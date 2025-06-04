@@ -1,4 +1,4 @@
-// src/utils/haptics.ts - COMPLETE HAPTICS WITH ALL EXPORTS
+// src/utils/haptics.ts - COMPLETE FILE WITH MISSING METHODS
 
 import * as Haptics from 'expo-haptics';
 
@@ -10,7 +10,7 @@ export type HapticType =
   | 'warning'
   | 'error'
   | 'selection'
-  | 'impact'; // ✅ ADD MISSING 'impact' TYPE
+  | 'impact';
 
 export const hapticFeedback = {
   light: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
@@ -37,10 +37,12 @@ export const hapticFeedback = {
     toggle: () => Haptics.selectionAsync(),
     navigation: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
     achievement: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+    tabSelection: () => Haptics.selectionAsync(), // ✅ FIXED: Added missing method
+    actionSuccess: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), // ✅ FIXED: Added missing method
   },
 };
 
-// ✅ ADD MISSING uiHaptics EXPORT (WHAT FILES ARE LOOKING FOR)
+// ✅ EXPORT uiHaptics with all required methods
 export const uiHaptics = hapticFeedback.ui;
 
 export const triggerHaptic = (type: HapticType) => {
@@ -59,12 +61,11 @@ export const triggerHaptic = (type: HapticType) => {
       return hapticFeedback.error();
     case 'selection':
       return hapticFeedback.selection();
-    case 'impact': // ✅ ADD MISSING IMPACT CASE
-      return hapticFeedback.medium(); // Use medium impact for generic 'impact'
+    case 'impact':
+      return hapticFeedback.medium();
     default:
       return hapticFeedback.light();
   }
 };
 
-// ✅ SINGLE DEFAULT EXPORT
 export default hapticFeedback;

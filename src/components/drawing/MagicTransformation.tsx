@@ -12,7 +12,7 @@ import Animated, {
 import { ShapeType, DrawingPath } from '@/types/drawing';
 import { hapticFeedback } from '@/utils/platform/haptics';
 import { AnimatedText } from '@/components/ui/AnimatedText';
-import { createGradient } from '@/utils/colors/gradientHelper';
+import { getGradient } from '@/utils/colors/gradientHelper';
 
 export interface MagicTransformationProps {
   // ✅ ADD MISSING PROPS
