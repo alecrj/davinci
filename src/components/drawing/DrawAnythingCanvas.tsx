@@ -1,6 +1,6 @@
 import React, { useRef, useImperativeHandle, forwardRef, useState, useCallback } from 'react';
-import { View, PanGestureHandler, PanGestureHandlerGestureEvent, ViewStyle } from 'react-native';
-import { State } from 'react-native-gesture-handler';
+import { View, ViewStyle } from 'react-native';
+import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
 import { useDrawing } from '@/context/DrawingContext';
 import { detectShape } from '@/utils/drawing/shapeDetection';
@@ -9,8 +9,11 @@ import { Point } from '@/types/drawing';
 export interface DrawAnythingCanvasProps {
   style?: ViewStyle;
   onShapeDetected?: (shape: string) => void;
+  onDrawingComplete?: (shape: any, drawing: any) => void; // ✅ FIXED: Added missing prop
   showGuides?: boolean;
   enableShapeDetection?: boolean;
+  width?: number;  // ✅ FIXED: Added missing props
+  height?: number; // ✅ FIXED: Added missing props
 }
 
 export interface DrawAnythingCanvasRef {
@@ -19,7 +22,15 @@ export interface DrawAnythingCanvasRef {
 }
 
 export const DrawAnythingCanvas = forwardRef<DrawAnythingCanvasRef, DrawAnythingCanvasProps>(
-  ({ style, onShapeDetected, showGuides = false, enableShapeDetection = true }, ref) => {
+  ({ 
+    style, 
+    onShapeDetected, 
+    onDrawingComplete, // ✅ FIXED: Added to destructure
+    showGuides = false, 
+    enableShapeDetection = true,
+    width,
+    height 
+  }, ref) => {
     const { 
       state: drawingState, 
       startDrawing, 
@@ -73,16 +84,24 @@ export const DrawAnythingCanvas = forwardRef<DrawAnythingCanvasRef, DrawAnything
           
           // ✅ FIXED: Shape detection with proper Point array
           if (enableShapeDetection && currentStroke.length > 3) {
-            const detectionResult = detectShape(currentStroke); // ✅ FIXED: Pass Point array directly
+            const detectionResult = detectShape(currentStroke);
             if (detectionResult && onShapeDetected) {
               onShapeDetected(detectionResult.type);
+            }
+            
+            // ✅ FIXED: Call onDrawingComplete if provided
+            if (onDrawingComplete) {
+              onDrawingComplete(detectionResult?.type || 'unknown', {
+                path: currentStroke,
+                strokeCount: currentStroke.length
+              });
             }
           }
           
           setCurrentStroke([]);
           break;
       }
-    }, [startDrawing, endDrawing, enableShapeDetection, onShapeDetected, currentStroke]);
+    }, [startDrawing, endDrawing, enableShapeDetection, onShapeDetected, onDrawingComplete, currentStroke]);
 
     const renderPath = (points: Point[]): string => {
       if (points.length < 2) return '';
@@ -122,7 +141,11 @@ export const DrawAnythingCanvas = forwardRef<DrawAnythingCanvasRef, DrawAnything
         maxPointers={1}
       >
         <View style={[{ flex: 1 }, style]}>
-          <Svg style={{ flex: 1 }} width="100%" height="100%">
+          <Svg 
+            style={{ flex: 1 }} 
+            width={width || "100%"} 
+            height={height || "100%"}
+          >
             {/* Render completed strokes */}
             {renderCompletedStrokes()}
             

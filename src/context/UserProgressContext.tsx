@@ -1,41 +1,46 @@
-// src/context/UserProgressContext.tsx - FIXED WITH MISSING PROPERTIES
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'casual' | 'hobby' | 'student'; // ✅ ADD MISSING TYPES
+export type SkillLevel = 'beginner' | 'intermediate' | 'advanced' | 'casual' | 'hobby' | 'student';
+
+// ✅ FIXED: Added missing assessment result interface
+export interface AssessmentResult {
+  shapeType: string;
+  accuracy: number;
+  timeSpent: number;
+  completedAt: Date;
+}
 
 export interface UserProgress {
-  // ✅ ONBOARDING AND ASSESSMENT FLAGS
+  // ✅ FIXED: Added missing properties that components expect
   hasCompletedOnboarding: boolean;
   hasCompletedAssessment: boolean;
   isNewUser: boolean;
+  currentLevel: number; // ✅ FIXED: Added missing currentLevel
   
-  // ✅ SKILL AND LEVEL
   skillLevel: SkillLevel;
   currentSkillLevel: SkillLevel;
   
-  // ✅ PROGRESS TRACKING
+  // ✅ FIXED: Added missing assessmentResults
+  assessmentResults: AssessmentResult[];
+  
   streak: number;
   totalLessonsCompleted: number;
   totalPracticeTime: number;
   weeklyProgress: number[];
   
-  // ✅ PREFERENCES
   hapticEnabled: boolean;
   notificationsEnabled: boolean;
   
-  // ✅ SUBSCRIPTION
   subscriptionTier: 'free' | 'premium' | 'pro';
   subscriptionExpiresAt: Date | null;
   
-  // ✅ ACHIEVEMENTS
   achievements: Array<{
     id: string;
     title: string;
     unlockedAt: Date;
   }>;
   
-  // ✅ STATS OBJECT
   stats: {
     totalLessonsCompleted: number;
     currentStreak: number;
@@ -44,10 +49,8 @@ export interface UserProgress {
     averageAccuracy: number;
   };
   
-  // ✅ ASSESSMENT RESULTS
   assessmentScore?: number;
   
-  // ✅ TIMESTAMPS
   lastActiveDate: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -55,16 +58,17 @@ export interface UserProgress {
 
 export interface UserProgressContextType {
   progress: UserProgress;
-  isLoading: boolean; // ✅ ADD MISSING IS_LOADING
+  isLoading: boolean;
   
-  // ✅ DIRECT ACCESS PROPERTIES COMPONENTS EXPECT
+  // ✅ FIXED: Direct access properties components expect
   skillLevel: SkillLevel;
   streak: number;
   totalLessonsCompleted: number;
   totalPracticeTime: number;
   weeklyProgress: number[];
+  currentLevel: number; // ✅ FIXED: Added missing currentLevel
+  assessmentResults: AssessmentResult[]; // ✅ FIXED: Added missing assessmentResults
   
-  // ✅ METHODS
   updateProgress: (updates: Partial<UserProgress>) => Promise<void>;
   updatePreferences: (preferences: { hapticEnabled?: boolean; notificationsEnabled?: boolean }) => Promise<void>;
   updateSkillLevel: (skillLevel: SkillLevel) => Promise<void>;
@@ -85,33 +89,29 @@ export const useUserProgress = () => {
 };
 
 const createDefaultProgress = (): UserProgress => ({
-  // ✅ ONBOARDING FLAGS
   hasCompletedOnboarding: false,
   hasCompletedAssessment: false,
   isNewUser: true,
+  currentLevel: 1, // ✅ FIXED: Added default currentLevel
   
-  // ✅ SKILL
   skillLevel: 'beginner',
   currentSkillLevel: 'beginner',
   
-  // ✅ PROGRESS
+  assessmentResults: [], // ✅ FIXED: Added default assessmentResults
+  
   streak: 0,
   totalLessonsCompleted: 0,
   totalPracticeTime: 0,
   weeklyProgress: [0, 0, 0, 0, 0, 0, 0],
   
-  // ✅ PREFERENCES
   hapticEnabled: true,
   notificationsEnabled: true,
   
-  // ✅ SUBSCRIPTION
   subscriptionTier: 'free',
   subscriptionExpiresAt: null,
   
-  // ✅ ACHIEVEMENTS
   achievements: [],
   
-  // ✅ STATS
   stats: {
     totalLessonsCompleted: 0,
     currentStreak: 0,
@@ -120,7 +120,6 @@ const createDefaultProgress = (): UserProgress => ({
     averageAccuracy: 0,
   },
   
-  // ✅ TIMESTAMPS
   lastActiveDate: new Date(),
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -128,7 +127,7 @@ const createDefaultProgress = (): UserProgress => ({
 
 export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [progress, setProgress] = useState<UserProgress>(createDefaultProgress());
-  const [isLoading, setIsLoading] = useState(true); // ✅ ADD LOADING STATE
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load progress from storage
   useEffect(() => {
@@ -224,14 +223,16 @@ export const UserProgressProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const value: UserProgressContextType = {
     progress,
-    isLoading, // ✅ EXPOSE LOADING STATE
+    isLoading,
     
-    // ✅ DIRECT ACCESS PROPERTIES
+    // ✅ FIXED: Direct access properties
     skillLevel: progress.skillLevel,
     streak: progress.streak,
     totalLessonsCompleted: progress.totalLessonsCompleted,
     totalPracticeTime: progress.totalPracticeTime,
     weeklyProgress: progress.weeklyProgress,
+    currentLevel: progress.currentLevel, // ✅ FIXED: Added missing currentLevel
+    assessmentResults: progress.assessmentResults, // ✅ FIXED: Added missing assessmentResults
     
     updateProgress,
     updatePreferences,

@@ -1,5 +1,3 @@
-// src/utils/haptics.ts - COMPLETE FILE WITH MISSING METHODS
-
 import * as Haptics from 'expo-haptics';
 
 export type HapticType = 
@@ -37,13 +35,23 @@ export const hapticFeedback = {
     toggle: () => Haptics.selectionAsync(),
     navigation: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
     achievement: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
-    tabSelection: () => Haptics.selectionAsync(), // ✅ FIXED: Added missing method
-    actionSuccess: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), // ✅ FIXED: Added missing method
+    tabSelection: () => Haptics.selectionAsync(),
+    actionSuccess: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+    // ✅ FIXED: Added missing methods that components expect
+    shapeDetected: () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+    celebration: () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 100);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 200);
+    },
   },
 };
 
-// ✅ EXPORT uiHaptics with all required methods
+// ✅ FIXED: Export uiHaptics with all required methods
 export const uiHaptics = hapticFeedback.ui;
+
+// ✅ FIXED: Export individual methods for backward compatibility
+export const haptics = hapticFeedback;
 
 export const triggerHaptic = (type: HapticType) => {
   switch (type) {
