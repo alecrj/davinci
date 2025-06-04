@@ -1,291 +1,299 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  Animated,
-  SafeAreaView,
-  Pressable,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, StyleSheet, Dimensions, Animated } from 'react-native';
+import { router } from 'expo-router';
+import { Text } from '@/components/Themed';
+import { DrawAnythingCanvas, MagicTransformation } from '@/components/drawing';
+import { Button } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
 import { useUserProgress } from '@/context/UserProgressContext';
-import { DrawAnythingCanvas } from '@/components/drawing/DrawAnythingCanvas';
-import { MagicTransformation } from '@/components/drawing/MagicTransformation';
-import { DrawingCelebration } from '@/components/drawing/DrawingCelebration';
-import { Button } from '@/components/ui/Button';
-import { AnimatedText } from '@/components/ui/AnimatedText';
-import { triggerHaptic } from '@/utils/haptics';
-import { ShapeType } from '@/types/drawing';
+import { uiHaptics } from '@/utils/haptics';
+import { ShapeType, sanitizeShapeType } from '@/types/drawing';
 
 const { width, height } = Dimensions.get('window');
 
-type OnboardingStep = 'intro' | 'drawing' | 'transformation' | 'celebration';
-
-export default function DrawAnythingScreen() {
-  const router = useRouter();
+export default function DrawAnythingOnboardingScreen() {
   const { theme } = useTheme();
+  const { colors } = theme;
   const { updateProgress } = useUserProgress();
   
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('intro');
-  const [detectedShape, setDetectedShape] = useState<ShapeType | null>(null);
+  const [showTransformation, setShowTransformation] = useState(false);
+  const [detectedShape, setDetectedShape] = useState<ShapeType>('unknown');
   const [userDrawing, setUserDrawing] = useState<any>(null);
+  const [hasDrawn, setHasDrawn] = useState(false);
   
-  // Animations
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const canvasRef = useRef<any>(null);
+
   useEffect(() => {
-    // Entrance animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [currentStep]);
-  
-  const handleDrawingComplete = (shape: ShapeType, drawing: any) => {
-    setDetectedShape(shape);
-    setUserDrawing(drawing);
-    triggerHaptic('impact');
+    // Fade in animation
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const handleShapeDetected = (shape: string) => {
+    // ✅ FIXED: Safely convert string to ShapeType
+    const validShape = sanitizeShapeType(shape);
+    setDetectedShape(validShape);
+    setUserDrawing({ shape: validShape, timestamp: Date.now() });
+    setHasDrawn(true);
     
-    // Transition to transformation
+    // Trigger haptic feedback
+    uiHaptics.shapeDetected();
+    
+    // Show transformation after a brief delay
     setTimeout(() => {
-      setCurrentStep('transformation');
+      setShowTransformation(true);
     }, 500);
   };
-  
+
   const handleTransformationComplete = () => {
-    setCurrentStep('celebration');
-    triggerHaptic('success');
-  };
-  
-  const handleContinue = async () => {
+    setShowTransformation(false);
+    
     // Update user progress
-    await updateProgress({
-      hasCompletedOnboarding: true,
-      isNewUser: false,
-      totalDrawings: 1,
+    updateProgress({
+      currentLevel: 1,
+      xp: 50,
+      streakDays: 1,
+      // ✅ FIXED: Remove non-existent property
+      lastActivity: new Date().toISOString(),
     });
     
-    // Navigate to skill assessment
-    router.push('/assessment');
+    // Trigger celebration haptic
+    uiHaptics.celebration();
+    
+    // Navigate to main app
+    setTimeout(() => {
+      router.replace('/');
+    }, 1000);
   };
-  
-  const renderStep = () => {
-    switch (currentStep) {
-      case 'intro':
-        return (
-          <Animated.View
-            style={[
-              styles.introContainer,
-              {
-                opacity: fadeAnim,
-                transform: [
-                  { translateY: slideAnim },
-                  { scale: scaleAnim },
-                ],
-              },
-            ]}
-          >
-            <View style={styles.textContainer}>
-              <AnimatedText
-                style={[styles.title, { color: theme.text }]}
-                delay={200}
-              >
-                Let's try something fun
-              </AnimatedText>
-              <AnimatedText
-                style={[styles.subtitle, { color: theme.textSecondary }]}
-                delay={400}
-              >
-                Draw anything you want
-              </AnimatedText>
-              <AnimatedText
-                style={[styles.description, { color: theme.textTertiary }]}
-                delay={600}
-              >
-                A circle, a line, a squiggle...{'\n'}
-                Whatever feels right to you
-              </AnimatedText>
-            </View>
-            
-            <Animated.View
-              style={[
-                styles.exampleContainer,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ scale: scaleAnim }],
-                },
-              ]}
-            >
-              {/* Show subtle examples */}
-              <View style={styles.examples}>
-                <View style={[styles.exampleShape, styles.circle, { borderColor: theme.accent }]} />
-                <View style={[styles.exampleShape, styles.square, { borderColor: theme.accent }]} />
-                <View style={[styles.exampleShape, styles.squiggle, { backgroundColor: theme.accent }]} />
-              </View>
-            </Animated.View>
-            
-            <Button
-              title="I'm ready to draw!"
-              onPress={() => setCurrentStep('drawing')}
-              style={styles.continueButton}
-            />
-          </Animated.View>
-        );
-        
-      case 'drawing':
-        return (
-          <Animated.View
-            style={[
-              styles.drawingContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{ scale: scaleAnim }],
-              },
-            ]}
-          >
-            <Text style={[styles.drawingTitle, { color: theme.text }]}>
-              Draw anything you like
-            </Text>
-            <Text style={[styles.drawingSubtitle, { color: theme.textSecondary }]}>
-              Don't think too hard, just draw!
-            </Text>
-            
-            <DrawAnythingCanvas
-              onDrawingComplete={handleDrawingComplete}
-              width={width - 40}
-              height={height * 0.5}
-            />
-            
-            <Text style={[styles.hint, { color: theme.textTertiary }]}>
-              Use your finger to draw
-            </Text>
-          </Animated.View>
-        );
-        
-      case 'transformation':
-        return (
-          <MagicTransformation
-            detectedShape={detectedShape!}
-            userDrawing={userDrawing}
-            onComplete={handleTransformationComplete}
-          />
-        );
-        
-      case 'celebration':
-        return (
-          <DrawingCelebration
-            shapeName={detectedShape!}
-            onContinue={handleContinue}
-          />
-        );
+
+  const handleSkip = () => {
+    // Update progress without drawing
+    updateProgress({
+      currentLevel: 1,
+      xp: 10,
+      streakDays: 1,
+      lastActivity: new Date().toISOString(),
+    });
+    
+    router.replace('/');
+  };
+
+  const handleClear = () => {
+    if (canvasRef.current) {
+      canvasRef.current.clearCanvas();
     }
+    setHasDrawn(false);
+    setDetectedShape('unknown');
+    setUserDrawing(null);
+    setShowTransformation(false);
+    
+    uiHaptics.buttonPress();
   };
-  
+
+  if (showTransformation) {
+    return (
+      <MagicTransformation
+        shape={detectedShape} // ✅ FIXED: Pass shape prop correctly
+        userDrawing={userDrawing}
+        onComplete={handleTransformationComplete}
+      />
+    );
+  }
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {renderStep()}
-    </SafeAreaView>
+    <Animated.View 
+      style={[
+        styles.container, 
+        { 
+          backgroundColor: colors.background,
+          opacity: fadeAnim 
+        }
+      ]}
+    >
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.text }]}>
+          Draw Anything
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Let's see what you can create! Draw anything that comes to mind.
+        </Text>
+        <Text style={[styles.encouragement, { color: colors.primary }]}>
+          There's no right or wrong - just express yourself! ✨
+        </Text>
+      </View>
+
+      <View style={[styles.canvasContainer, { backgroundColor: colors.card }]}>
+        <DrawAnythingCanvas
+          ref={canvasRef}
+          style={styles.canvas}
+          onShapeDetected={handleShapeDetected}
+          showGuides={false}
+          enableShapeDetection={true}
+        />
+        
+        {!hasDrawn && (
+          <View style={styles.canvasOverlay}>
+            <Text style={[styles.overlayText, { color: colors.textSecondary }]}>
+              Tap and draw on the canvas
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.controls}>
+        <View style={styles.buttonRow}>
+          {hasDrawn && (
+            <Button
+              title="Clear"
+              onPress={handleClear}
+              variant="outline"
+              size="medium"
+              style={styles.clearButton}
+            />
+          )}
+          
+          <Button
+            title="Skip for now"
+            onPress={handleSkip}
+            variant="ghost"
+            size="medium"
+            style={styles.skipButton}
+          />
+        </View>
+
+        {hasDrawn && (
+          <View style={styles.detectionInfo}>
+            <Text style={[styles.detectionText, { color: colors.textSecondary }]}>
+              🎨 Great work! I can see you're getting creative.
+            </Text>
+            {detectedShape !== 'unknown' && (
+              <Text style={[styles.shapeDetected, { color: colors.primary }]}>
+                I detected a {detectedShape}! ✨
+              </Text>
+            )}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.tips}>
+        <Text style={[styles.tipsTitle, { color: colors.text }]}>💡 Quick Tips:</Text>
+        <Text style={[styles.tipText, { color: colors.textSecondary }]}>
+          • Try drawing simple shapes like circles, squares, or hearts
+        </Text>
+        <Text style={[styles.tipText, { color: colors.textSecondary }]}>
+          • Don't worry about perfection - we'll help you improve!
+        </Text>
+        <Text style={[styles.tipText, { color: colors.textSecondary }]}>
+          • Have fun and let your creativity flow!
+        </Text>
+      </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
   },
-  introContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
     alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  textContainer: {
-    alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 30,
+    paddingTop: 40,
   },
   title: {
-    fontSize: 36,
-    fontFamily: 'SF-Pro-Display-Bold',
+    fontSize: 32,
+    fontWeight: 'bold',
     marginBottom: 12,
-    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 24,
-    fontFamily: 'SF-Pro-Display-Medium',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  description: {
     fontSize: 18,
-    fontFamily: 'SF-Pro-Text-Regular',
     textAlign: 'center',
     lineHeight: 26,
-  },
-  exampleContainer: {
-    marginBottom: 60,
-  },
-  examples: {
-    flexDirection: 'row',
-    gap: 30,
-  },
-  exampleShape: {
-    width: 60,
-    height: 60,
-  },
-  circle: {
-    borderRadius: 30,
-    borderWidth: 3,
-  },
-  square: {
-    borderWidth: 3,
-  },
-  squiggle: {
-    height: 3,
-    borderRadius: 2,
-  },
-  continueButton: {
-    position: 'absolute',
-    bottom: 60,
-    left: 40,
-    right: 40,
-  },
-  drawingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 20,
-  },
-  drawingTitle: {
-    fontSize: 28,
-    fontFamily: 'SF-Pro-Display-Semibold',
     marginBottom: 8,
   },
-  drawingSubtitle: {
-    fontSize: 18,
-    fontFamily: 'SF-Pro-Text-Regular',
-    marginBottom: 40,
-  },
-  hint: {
+  encouragement: {
     fontSize: 16,
-    fontFamily: 'SF-Pro-Text-Regular',
-    marginTop: 20,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  canvasContainer: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 30,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    position: 'relative',
+  },
+  canvas: {
+    flex: 1,
+  },
+  canvasOverlay: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -75 }, { translateY: -20 }],
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+  },
+  overlayText: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.6,
+  },
+  controls: {
+    marginBottom: 20,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  clearButton: {
+    flex: 1,
+    marginRight: 10,
+  },
+  skipButton: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  detectionInfo: {
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: 12,
+  },
+  detectionText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  shapeDetected: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  tips: {
+    marginTop: 10,
+  },
+  tipsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  tipText: {
+    fontSize: 14,
+    marginBottom: 4,
+    paddingLeft: 8,
   },
 });

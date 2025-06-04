@@ -1,30 +1,29 @@
-// src/components/ui/Button.tsx
 import React from 'react';
-import { 
-  TouchableOpacity, 
-  ViewStyle, 
-  TextStyle, 
+import {
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
   StyleProp,
-  ActivityIndicator 
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Text } from '@/components/Themed';
 import { useTheme } from '@/context/ThemeContext';
-import { hapticFeedback } from '@/utils/platform/haptics';
-import { AnimatedText } from './AnimatedText';
-import { createGradient } from '@/utils/colors/gradientHelper';
+import { uiHaptics } from '@/utils/haptics';
 
 export interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive'; // ✅ ADD DESTRUCTIVE
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
   size?: 'small' | 'medium' | 'large';
-  disabled?: boolean;
   loading?: boolean;
+  disabled?: boolean;
+  icon?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
-  hapticType?: 'light' | 'medium' | 'heavy' | 'selection';
   fullWidth?: boolean;
-  icon?: React.ReactNode;
+  hapticFeedback?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -32,198 +31,275 @@ export const Button: React.FC<ButtonProps> = ({
   onPress,
   variant = 'primary',
   size = 'medium',
-  disabled = false,
   loading = false,
+  disabled = false,
+  icon,
   style,
   textStyle,
-  hapticType = 'light',
   fullWidth = false,
-  icon,
+  hapticFeedback = true,
 }) => {
-  const { colors, isDark } = useTheme();
+  const { theme } = useTheme();
+  const { colors } = theme;
 
-  const handlePress = async () => {
-    if (disabled || loading) return;
+  const handlePress = () => {
+    if (loading || disabled) return;
     
-    // Trigger haptic feedback
-    await hapticFeedback.trigger(hapticType);
+    if (hapticFeedback) {
+      uiHaptics.buttonPress();
+    }
+    
     onPress();
   };
 
-  const getButtonStyles = (): StyleProp<ViewStyle> => {
+  // ✅ FIXED: Use available theme colors instead of non-existent properties
+  const getButtonStyles = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      borderRadius: 12,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      borderRadius: 12,
+      paddingHorizontal: getPaddingHorizontal(),
+      paddingVertical: getPaddingVertical(),
+      minHeight: getMinHeight(),
       opacity: disabled ? 0.6 : 1,
-    };
-
-    const sizeStyles: Record<typeof size, ViewStyle> = {
-      small: { paddingVertical: 8, paddingHorizontal: 16, minHeight: 36 },
-      medium: { paddingVertical: 12, paddingHorizontal: 20, minHeight: 44 },
-      large: { paddingVertical: 16, paddingHorizontal: 24, minHeight: 52 },
-    };
-
-    const variantStyles: Record<typeof variant, ViewStyle> = {
-      primary: {},
-      secondary: { backgroundColor: colors.secondary },
-      outline: { 
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        borderColor: colors.primary,
-      },
-      ghost: { backgroundColor: 'transparent' },
-      destructive: { backgroundColor: '#FF3B30' }, // ✅ ADD DESTRUCTIVE STYLES
     };
 
     if (fullWidth) {
       baseStyle.width = '100%';
     }
 
-    return [baseStyle, sizeStyles[size], variantStyles[variant]];
+    switch (variant) {
+      case 'primary':
+        return {
+          ...baseStyle,
+          backgroundColor: colors.primary,
+        };
+      case 'secondary':
+        return {
+          ...baseStyle,
+          backgroundColor: colors.secondary,
+        };
+      case 'outline':
+        return {
+          ...baseStyle,
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: colors.primary,
+        };
+      case 'ghost':
+        return {
+          ...baseStyle,
+          backgroundColor: 'transparent',
+        };
+      case 'destructive':
+        return {
+          ...baseStyle,
+          backgroundColor: '#FF3B30', // ✅ FIXED: Use fallback instead of non-existent colors.destructive
+        };
+      default:
+        return {
+          ...baseStyle,
+          backgroundColor: colors.primary,
+        };
+    }
   };
 
-  const getTextStyles = (): StyleProp<TextStyle> => {
-    const sizeStyles: Record<typeof size, TextStyle> = {
-      small: { fontSize: 14, fontWeight: '600' },
-      medium: { fontSize: 16, fontWeight: '600' },
-      large: { fontSize: 18, fontWeight: '700' },
+  // ✅ FIXED: Use available theme colors
+  const getTextStyles = (): TextStyle => {
+    const baseStyle: TextStyle = {
+      fontSize: getFontSize(),
+      fontWeight: '600',
+      textAlign: 'center',
     };
 
-    const variantStyles: Record<typeof variant, TextStyle> = {
-      primary: { color: '#FFFFFF' },
-      secondary: { color: '#FFFFFF' },
-      outline: { color: colors.primary },
-      ghost: { color: colors.primary },
-      destructive: { color: '#FFFFFF' }, // ✅ ADD DESTRUCTIVE TEXT COLOR
-    };
-
-    return [sizeStyles[size], variantStyles[variant]];
+    switch (variant) {
+      case 'primary':
+        return {
+          ...baseStyle,
+          color: '#FFFFFF', // ✅ FIXED: Use fallback instead of colors.primaryForeground
+        };
+      case 'secondary':
+        return {
+          ...baseStyle,
+          color: colors.text, // ✅ FIXED: Use available colors.text
+        };
+      case 'outline':
+        return {
+          ...baseStyle,
+          color: colors.primary,
+        };
+      case 'ghost':
+        return {
+          ...baseStyle,
+          color: colors.primary,
+        };
+      case 'destructive':
+        return {
+          ...baseStyle,
+          color: '#FFFFFF',
+        };
+      default:
+        return {
+          ...baseStyle,
+          color: '#FFFFFF', // ✅ FIXED: Use fallback
+        };
+    }
   };
 
-  const renderButton = () => (
+  const getPaddingHorizontal = (): number => {
+    switch (size) {
+      case 'small':
+        return 12;
+      case 'medium':
+        return 16;
+      case 'large':
+        return 24;
+      default:
+        return 16;
+    }
+  };
+
+  const getPaddingVertical = (): number => {
+    switch (size) {
+      case 'small':
+        return 8;
+      case 'medium':
+        return 12;
+      case 'large':
+        return 16;
+      default:
+        return 12;
+    }
+  };
+
+  const getMinHeight = (): number => {
+    switch (size) {
+      case 'small':
+        return 32;
+      case 'medium':
+        return 44;
+      case 'large':
+        return 52;
+      default:
+        return 44;
+    }
+  };
+
+  const getFontSize = (): number => {
+    switch (size) {
+      case 'small':
+        return 14;
+      case 'medium':
+        return 16;
+      case 'large':
+        return 18;
+      default:
+        return 16;
+    }
+  };
+
+  const getSpinnerSize = (): number => {
+    switch (size) {
+      case 'small':
+        return 16;
+      case 'medium':
+        return 20;
+      case 'large':
+        return 24;
+      default:
+        return 20;
+    }
+  };
+
+  // ✅ FIXED: Use available theme colors
+  const getSpinnerColor = (): string => {
+    switch (variant) {
+      case 'primary':
+        return '#FFFFFF'; // ✅ FIXED: Use fallback
+      case 'secondary':
+        return colors.text; // ✅ FIXED: Use available colors.text
+      case 'outline':
+      case 'ghost':
+        return colors.primary;
+      case 'destructive':
+        return '#FFFFFF';
+      default:
+        return '#FFFFFF'; // ✅ FIXED: Use fallback
+    }
+  };
+
+  const combineTextStyles = (): TextStyle[] => {
+    const baseStyles = getTextStyles();
+    const styles: TextStyle[] = [baseStyles];
+    
+    if (textStyle) {
+      if (Array.isArray(textStyle)) {
+        textStyle.forEach(style => {
+          if (style) {
+            styles.push(style as TextStyle);
+          }
+        });
+      } else if (textStyle) {
+        styles.push(textStyle as TextStyle);
+      }
+    }
+    
+    return styles;
+  };
+
+  if (loading) {
+    return (
+      <TouchableOpacity
+        style={[getButtonStyles(), style]}
+        disabled={true}
+        activeOpacity={0.8}
+      >
+        <ActivityIndicator 
+          size={getSpinnerSize()} 
+          color={getSpinnerColor()} 
+        />
+        {icon && (
+          <View style={{ marginLeft: 8 }}>
+            {icon}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
     <TouchableOpacity
       style={[getButtonStyles(), style]}
       onPress={handlePress}
-      disabled={disabled || loading}
+      disabled={disabled}
       activeOpacity={0.8}
     >
-      {loading && (
-        <ActivityIndicator 
-          size="small" 
-          color={variant === 'outline' || variant === 'ghost' ? colors.primary : '#FFFFFF'}
-          style={{ marginRight: icon || title ? 8 : 0 }}
-        />
-      )}
-      
       {icon && !loading && (
-        <>{icon}</>
+        <View style={{ marginRight: 8 }}>
+          {icon}
+        </View>
       )}
       
-      {title && (
-        <AnimatedText
-          style={[getTextStyles(), textStyle, { marginLeft: icon && !loading ? 8 : 0 }]}
-          animation="fadeIn"
-        >
-          {title}
-        </AnimatedText>
+      <Text 
+        style={[
+          ...combineTextStyles(),
+          { marginLeft: icon && !loading ? 8 : 0 }
+        ]}
+      >
+        {title}
+      </Text>
+      
+      {loading && (
+        <View style={{ marginLeft: icon ? 8 : 0 }}>
+          <ActivityIndicator 
+            size={getSpinnerSize()} 
+            color={getSpinnerColor()} 
+          />
+        </View>
       )}
     </TouchableOpacity>
   );
-
-  // Use gradient for primary and destructive variants
-  if (variant === 'primary') {
-    return (
-      <LinearGradient
-        colors={createGradient([colors.primary, colors.secondary])}
-        style={[getButtonStyles(), style]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <TouchableOpacity
-          style={{ 
-            flex: 1, 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            paddingVertical: 0,
-            paddingHorizontal: 0,
-          }}
-          onPress={handlePress}
-          disabled={disabled || loading}
-          activeOpacity={0.8}
-        >
-          {loading && (
-            <ActivityIndicator 
-              size="small" 
-              color="#FFFFFF"
-              style={{ marginRight: icon || title ? 8 : 0 }}
-            />
-          )}
-          
-          {icon && !loading && (
-            <>{icon}</>
-          )}
-          
-          {title && (
-            <AnimatedText
-              style={[getTextStyles(), textStyle, { marginLeft: icon && !loading ? 8 : 0 }]}
-              animation="fadeIn"
-            >
-              {title}
-            </AnimatedText>
-          )}
-        </TouchableOpacity>
-      </LinearGradient>
-    );
-  }
-
-  if (variant === 'destructive') {
-    return (
-      <LinearGradient
-        colors={createGradient(['#FF3B30', '#FF6961'])}
-        style={[getButtonStyles(), style]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <TouchableOpacity
-          style={{ 
-            flex: 1, 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            paddingVertical: 0,
-            paddingHorizontal: 0,
-          }}
-          onPress={handlePress}
-          disabled={disabled || loading}
-          activeOpacity={0.8}
-        >
-          {loading && (
-            <ActivityIndicator 
-              size="small" 
-              color="#FFFFFF"
-              style={{ marginRight: icon || title ? 8 : 0 }}
-            />
-          )}
-          
-          {icon && !loading && (
-            <>{icon}</>
-          )}
-          
-          {title && (
-            <AnimatedText
-              style={[getTextStyles(), textStyle, { marginLeft: icon && !loading ? 8 : 0 }]}
-              animation="fadeIn"
-            >
-              {title}
-            </AnimatedText>
-          )}
-        </TouchableOpacity>
-      </LinearGradient>
-    );
-  }
-
-  return renderButton();
 };
+
+export default Button;

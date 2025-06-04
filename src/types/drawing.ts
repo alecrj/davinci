@@ -1,15 +1,37 @@
-// src/types/drawing.ts - COMPLETE DRAWING TYPES
 import { ColorValue } from 'react-native';
 
-// ✅ CORE DRAWING TYPES
+// Core drawing types
 export interface Point {
   x: number;
   y: number;
 }
 
-export interface Size {
+export type ShapeType = 
+  | 'circle'
+  | 'square' 
+  | 'triangle'
+  | 'rectangle'
+  | 'star'
+  | 'heart'
+  | 'line'
+  | 'arrow'
+  | 'spiral'
+  | 'squiggle'
+  | 'unknown';
+
+export interface BoundingBox {
+  x: number;
+  y: number;
   width: number;
   height: number;
+}
+
+// ✅ FIXED: DetectedShape interface with pointCount property
+export interface DetectedShape {
+  type: ShapeType;
+  confidence: number;
+  boundingBox: BoundingBox;
+  pointCount: number; // ✅ FIXED: Added missing pointCount property
 }
 
 export interface DrawingPath {
@@ -20,183 +42,210 @@ export interface DrawingPath {
   timestamp: number;
 }
 
-// ✅ PROPER GRADIENT COLORS TYPE  
-export type GradientColors = readonly [ColorValue, ColorValue, ...ColorValue[]];
-
-// ✅ SHAPE TYPES
-export type ShapeType = 
-  | 'circle'
-  | 'square' 
-  | 'triangle'
-  | 'rectangle'
-  | 'star'
-  | 'heart'
-  | 'line'
-  | 'arrow'
-  | 'spiral'  // ✅ ADD MISSING SPIRAL
-  | 'squiggle' // ✅ ADD MISSING SQUIGGLE
-  | 'unknown';
-
-// ✅ DRAWING TOOL INTERFACE
-export interface DrawingTool {
-  id: string;
-  type: 'pen' | 'brush' | 'eraser' | 'highlighter';
-  color: string;
-  width: number;
-  opacity: number;
-}
-
-// ✅ DRAWING STROKE INTERFACE  
 export interface DrawingStroke {
   id: string;
   path: DrawingPath;
-  strokeColor?: string;
-  strokeWidth?: number;
-  opacity?: number;
-  tool?: string;
-  timestamp?: number;
 }
 
-// ✅ CANVAS SETTINGS INTERFACE
-export interface CanvasSettings {
-  backgroundColor: string;
-  gridEnabled: boolean;
-  gridColor: string;
-  snapToGrid: boolean;
-  gridSize: number;
-}
-
-// ✅ DETECTED SHAPE INTERFACE
-export interface DetectedShape {
-  type: ShapeType;
-  confidence: number;
-  boundingBox: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-  timestamp: number;
-}
-
-// ✅ SHAPE TRANSFORMATION INTERFACE
-export interface ShapeTransformation {
+export interface DrawingTool {
   id: string;
-  type: 'magic' | 'celebration' | 'enhancement';
-  fromShape: ShapeType;
-  toShape: string;
-  duration: number;
-  timestamp: number;
+  type: 'pen' | 'brush' | 'eraser' | 'pencil';
+  opacity: number;
+  color: string;
 }
 
-// ✅ DRAWING SESSION INTERFACE
-export interface DrawingSession {
-  id: string;
-  startTime: number;
-  endTime?: number;
-  totalTime: number;
-  strokes: DrawingStroke[];
-  transformations: ShapeTransformation[];
-  shapesDetected: DetectedShape[];
-  isComplete: boolean;
-}
-
-// ✅ COMPLETE DRAWING STATE INTERFACE
+// Drawing context state
 export interface DrawingState {
-  currentSession: DrawingSession | null;
-  sessions: DrawingSession[];
+  isDrawing: boolean;
   currentTool: DrawingTool;
-  canvasSettings: CanvasSettings;
-  transformationQueue: ShapeTransformation[];
+  brushSize: number;
+  color: string;
+  opacity: number;
+  strokes: DrawingStroke[];
+  currentPath: Point[];
   undoStack: Point[][];
   redoStack: Point[][];
-  isDrawing: boolean;
   lastDetectedShape: DetectedShape | null;
-}
-
-// ✅ DRAWING CONTEXT TYPE INTERFACE
-export interface DrawingContextType {
-  drawingState: DrawingState;
-  addPath: (path: DrawingPath) => void;
-  clearDrawing: () => void;
-  startNewSession: () => void;
-  endCurrentSession: () => void;
-  setCurrentTool: (tool: DrawingTool) => void;
-  updateCanvasSettings: (settings: Partial<CanvasSettings>) => void;
-  onShapeDetected: (shape: DetectedShape) => void;
-  addTransformation: (transformation: Omit<ShapeTransformation, 'id'>) => void;
-  completeTransformation: (transformationId: string) => void;
-  undo: () => void;
-  redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  isProcessing: boolean;
 }
 
-// ✅ SHAPE DETECTION RESULT
-export interface ShapeDetectionResult {
-  type: ShapeType;
+// AI and feedback types
+export interface DrawingAnalysis {
+  skillLevel: 'beginner' | 'intermediate' | 'advanced';
+  strengths: string[];
+  improvements: string[];
   confidence: number;
-  boundingBox: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
+  progression: number;
 }
 
-export interface DrawingShape {
-  type: ShapeType;
-  confidence: number;
-  boundingBox: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-  points: Point[];
-}
-
-// ✅ LESSON AND PROGRESS TYPES
-export interface LessonStep {
-  id: string;
-  type: 'instruction' | 'drawing' | 'feedback';
-  title: string;
-  description: string;
-  targetShape?: ShapeType;
-  duration?: number;
-}
-
-export interface Lesson {
-  id: string;
-  title: string;
-  description: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  estimatedTime: number;
-  steps: LessonStep[];
-  color: GradientColors;
-  locked: boolean;
-  completed: boolean;
-  accuracy?: number;
-}
-
-// ✅ TRANSFORMATION AND MAGIC EFFECTS
-export interface TransformationEffect {
-  type: 'magic' | 'celebration' | 'encouragement';
-  duration: number;
-  shape: ShapeType;
+export interface AIFeedback {
   message: string;
+  encouragement: string;
+  tips?: string[];
+  nextStep?: string;
+  score?: number;
 }
 
-// ✅ HELPER FUNCTIONS FOR TYPE CONVERSION
-export const createGradientColors = (colors: string[]): GradientColors => {
-  if (colors.length < 2) {
-    return ['#007AFF', '#5856D6'] as GradientColors;
-  }
-  return colors as GradientColors;
-};
+// Transformation and effects
+export interface TransformationEffect {
+  type: 'enhancement' | 'style' | 'color' | 'composition';
+  name: string;
+  description: string;
+  before: string; // Image URI
+  after: string;  // Image URI
+}
 
-export const ensureGradientColors = (colors: string[] | GradientColors): GradientColors => {
-  return Array.isArray(colors) && colors.length >= 2 
-    ? createGradientColors(colors)
-    : ['#007AFF', '#5856D6'] as GradientColors;
+// Lesson and assessment types
+export interface DrawingChallenge {
+  id: string;
+  type: 'shape' | 'freeform' | 'trace' | 'creative';
+  instruction: string;
+  targetShape?: ShapeType;
+  timeLimit?: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+export interface AssessmentResult {
+  accuracy: number;
+  speed: number;
+  confidence: number;
+  creativity: number;
+  overallScore: number;
+  feedback: AIFeedback;
+}
+
+// Canvas and rendering types
+export interface CanvasConfig {
+  width: number;
+  height: number;
+  backgroundColor: string;
+  showGrid?: boolean;
+  snapToGrid?: boolean;
+  gridSize?: number;
+}
+
+export interface RenderOptions {
+  antialias: boolean;
+  smoothing: boolean;
+  pressureSensitivity: boolean;
+  showStrokes: boolean;
+  showGuides: boolean;
+}
+
+// Export and sharing
+export interface ExportOptions {
+  format: 'png' | 'jpg' | 'svg' | 'pdf';
+  quality: number;
+  background: 'transparent' | 'white' | 'custom';
+  customBackground?: string;
+  includeMetadata: boolean;
+}
+
+export interface ShareableArtwork {
+  id: string;
+  imageUri: string;
+  thumbnailUri: string;
+  metadata: {
+    createdAt: Date;
+    duration: number;
+    strokeCount: number;
+    tools: string[];
+    colors: string[];
+  };
+  tags: string[];
+  isPublic: boolean;
+}
+
+// Gradient types for UI components
+export type GradientColors = readonly [ColorValue, ColorValue, ...ColorValue[]];
+
+// ✅ FIXED: Removed problematic gradient conversion function
+// Instead, use the proper helper from utils/colors/gradientHelper.ts
+
+// Utility functions
+export function createPoint(x: number, y: number): Point {
+  return { x, y };
+}
+
+export function calculateDistance(p1: Point, p2: Point): number {
+  return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+}
+
+export function calculateBoundingBox(points: Point[]): BoundingBox {
+  if (points.length === 0) {
+    return { x: 0, y: 0, width: 0, height: 0 };
+  }
+
+  const xCoords = points.map(p => p.x);
+  const yCoords = points.map(p => p.y);
+  
+  const minX = Math.min(...xCoords);
+  const maxX = Math.max(...xCoords);
+  const minY = Math.min(...yCoords);
+  const maxY = Math.max(...yCoords);
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  };
+}
+
+export function isValidShapeType(value: string): value is ShapeType {
+  const validShapes: ShapeType[] = [
+    'circle', 'square', 'triangle', 'rectangle', 'star',
+    'heart', 'line', 'arrow', 'spiral', 'squiggle', 'unknown'
+  ];
+  return validShapes.includes(value as ShapeType);
+}
+
+export function sanitizeShapeType(value: string | null | undefined): ShapeType {
+  if (!value || typeof value !== 'string') {
+    return 'unknown';
+  }
+  
+  return isValidShapeType(value) ? value : 'unknown';
+}
+
+// Animation and timing
+export interface AnimationConfig {
+  duration: number;
+  delay?: number;
+  easing?: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+  repeat?: boolean;
+  repeatCount?: number;
+}
+
+export interface DrawingAnimation {
+  type: 'draw' | 'reveal' | 'transform' | 'celebrate';
+  config: AnimationConfig;
+  targetPaths: DrawingPath[];
+}
+
+// Performance and optimization
+export interface PerformanceMetrics {
+  fps: number;
+  renderTime: number;
+  memoryUsage: number;
+  strokeCount: number;
+  pointCount: number;
+}
+
+export interface OptimizationSettings {
+  maxPoints: number;
+  simplificationTolerance: number;
+  enableBatching: boolean;
+  useWebGL: boolean;
+  cullOffscreenStrokes: boolean;
+}
+
+export default {
+  createPoint,
+  calculateDistance,
+  calculateBoundingBox,
+  isValidShapeType,
+  sanitizeShapeType,
 };

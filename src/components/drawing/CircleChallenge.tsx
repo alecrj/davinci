@@ -1,301 +1,284 @@
-import React, { useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
-  Animated,
-  Vibration,
-  Alert,
-} from 'react-native';
-import { TouchDrawingCanvas } from './TouchDrawingCanvas';
-import { MagicTransformation } from './MagicTransformation';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Dimensions, Animated } from 'react-native';
+import { Text } from '@/components/Themed';
+import { TouchDrawingCanvas, MagicTransformation } from '@/components/drawing';
+import { Button } from '@/components/ui';
+import { useTheme } from '@/context/ThemeContext';
+import { uiHaptics } from '@/utils/haptics';
+import { detectShape } from '@/utils/drawing/shapeDetection';
+import { Point, ShapeType } from '@/types/drawing';
 
 const { width, height } = Dimensions.get('window');
 
-export const CircleChallenge: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<'welcome' | 'drawing' | 'transformation' | 'celebration'>('welcome');
-  const [drawnPath, setDrawnPath] = useState<Array<{x: number, y: number}>>([]);
-  const [isCircleDetected, setIsCircleDetected] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+interface CircleChallengeProps {
+  onComplete: (result: { accuracy: number; timeSpent: number }) => void;
+}
 
-  React.useEffect(() => {
-    // Entrance animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
+export const CircleChallenge: React.FC<CircleChallengeProps> = ({ onComplete }) => {
+  const { theme } = useTheme();
+  const { colors } = theme;
+  
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawnPath, setDrawnPath] = useState<Point[]>([]);
+  const [showTransformation, setShowTransformation] = useState(false);
+  const [startTime] = useState(Date.now());
+  const [challengeComplete, setChallengeComplete] = useState(false);
+  
+  const [fadeAnim] = useState(new Animated.Value(1));
+  const [scaleAnim] = useState(new Animated.Value(1));
+
+  // Calculate canvas dimensions for iPad optimization
+  const canvasWidth = Math.min(width - 40, 600); // Max 600px for iPad optimization
+  const canvasHeight = Math.min(height * 0.6, 400); // Responsive height
+
+  useEffect(() => {
+    // Start challenge animation
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 1.05,
         duration: 1000,
         useNativeDriver: true,
       }),
-      Animated.spring(scaleAnim, {
+      Animated.timing(scaleAnim, {
         toValue: 1,
-        tension: 50,
-        friction: 7,
+        duration: 1000,
         useNativeDriver: true,
       }),
     ]).start();
   }, []);
 
-  const handleDrawingComplete = (path: Array<{x: number, y: number}>) => {
+  const handleDrawingComplete = (path: Point[]) => {
     setDrawnPath(path);
+    setIsDrawing(false);
     
-    // Simple circle detection algorithm
-    if (detectCircle(path)) {
-      setIsCircleDetected(true);
-      Vibration.vibrate(100); // Haptic feedback
+    if (path.length > 5) {
+      // Analyze the drawn shape
+      const detectedShape = detectShape(path);
       
-      // Move to transformation step
-      setTimeout(() => {
-        setCurrentStep('transformation');
-      }, 500);
+      if (detectedShape && detectedShape.type === 'circle') {
+        // Good circle detected
+        uiHaptics.actionSuccess();
+        handleTransformationComplete();
+      } else {
+        // Not quite a circle, show transformation
+        setShowTransformation(true);
+      }
     }
   };
 
-  const detectCircle = (path: Array<{x: number, y: number}>): boolean => {
-    if (path.length < 20) return false;
-    
-    // Calculate center point
-    const centerX = path.reduce((sum, point) => sum + point.x, 0) / path.length;
-    const centerY = path.reduce((sum, point) => sum + point.y, 0) / path.length;
-    
-    // Calculate average distance from center
-    const distances = path.map(point => 
-      Math.sqrt(Math.pow(point.x - centerX, 2) + Math.pow(point.y - centerY, 2))
-    );
-    const avgDistance = distances.reduce((sum, dist) => sum + dist, 0) / distances.length;
-    
-    // Check if most points are roughly the same distance from center (circle-like)
-    const tolerance = avgDistance * 0.3;
-    const circularPoints = distances.filter(dist => Math.abs(dist - avgDistance) < tolerance);
-    
-    return circularPoints.length > path.length * 0.7; // 70% of points should be roughly circular
-  };
-
-  const startDrawing = () => {
-    setCurrentStep('drawing');
-  };
-
   const handleTransformationComplete = () => {
-    setCurrentStep('celebration');
-    Vibration.vibrate([100, 50, 100]); // Success haptic pattern
+    setShowTransformation(false);
+    setChallengeComplete(true);
+    
+    const timeSpent = Date.now() - startTime;
+    const accuracy = calculateCircleAccuracy(drawnPath);
+    
+    // Fade out and complete
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 500,
+      useNativeDriver: true,
+    }).start(() => {
+      onComplete({ accuracy, timeSpent });
+    });
   };
 
-  if (currentStep === 'welcome') {
-    return (
-      <Animated.View 
-        style={[
-          styles.container, 
-          { 
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }]
-          }
-        ]}
-      >
-        <View style={styles.welcomeContent}>
-          <Text style={styles.title}>Let's start simple...</Text>
-          <Text style={styles.subtitle}>Can you draw a circle?</Text>
-          <Text style={styles.encouragement}>Any circle is perfect! ✨</Text>
-          
-          <Animated.View style={styles.circleExample}>
-            <View style={styles.exampleCircle} />
-          </Animated.View>
-          
-          <Text 
-            style={styles.startButton}
-            onPress={startDrawing}
-          >
-            Yes, I can try! 🎨
-          </Text>
-        </View>
-      </Animated.View>
-    );
-  }
+  const calculateCircleAccuracy = (path: Point[]): number => {
+    if (path.length < 5) return 0;
+    
+    // Simple circle accuracy calculation
+    const detectedShape = detectShape(path);
+    if (detectedShape && detectedShape.type === 'circle') {
+      return Math.min(detectedShape.confidence * 100, 100);
+    }
+    
+    return Math.max(30, Math.random() * 40 + 30); // Minimum 30% for effort
+  };
 
-  if (currentStep === 'drawing') {
-    return (
-      <View style={styles.container}>
-        <View style={styles.drawingHeader}>
-          <Text style={styles.drawingTitle}>Draw your circle here</Text>
-          <Text style={styles.drawingSubtitle}>Use your finger - don't worry about making it perfect!</Text>
-        </View>
-        
-        <TouchDrawingCanvas
-          onDrawingComplete={handleDrawingComplete}
-          width={width - 40}
-          height={height * 0.6}
-        />
-        
-        <View style={styles.drawingFooter}>
-          <Text style={styles.encouragingText}>
-            {drawnPath.length > 0 ? "Looking great! Keep going..." : "Touch and drag to draw"}
-          </Text>
-        </View>
-      </View>
-    );
-  }
+  const handleRetry = () => {
+    setDrawnPath([]);
+    setIsDrawing(false);
+    setShowTransformation(false);
+    setChallengeComplete(false);
+    
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
 
-  if (currentStep === 'transformation') {
+  if (showTransformation) {
     return (
       <MagicTransformation
-        originalPath={drawnPath}
-        onTransformationComplete={handleTransformationComplete}
+        shape="circle"
+        userDrawing={drawnPath}
+        onComplete={handleTransformationComplete}
       />
     );
   }
 
-  if (currentStep === 'celebration') {
-    return (
-      <View style={styles.container}>
-        <View style={styles.celebrationContent}>
-          <Text style={styles.celebrationTitle}>🎉 AMAZING! 🎉</Text>
-          <Text style={styles.celebrationText}>You just drew 5 things!</Text>
-          <Text style={styles.celebrationSubtext}>
-            • A smiley face 😊{'\n'}
-            • A bright sun ☀️{'\n'}
-            • A spinning wheel 🎡{'\n'}
-            • A delicious pizza 🍕{'\n'}
-            • A working clock 🕐
-          </Text>
-          
-          <Text style={styles.transformationMessage}>
-            See? You CAN draw!{'\n'}Let's unlock what else you can create...
-          </Text>
-          
-          <Text 
-            style={styles.continueButton}
-            onPress={() => Alert.alert('Next Steps', 'Ready for your first lesson?')}
-          >
-            Continue the Journey 🚀
+  return (
+    <Animated.View 
+      style={[
+        styles.container, 
+        { 
+          backgroundColor: colors.background,
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }]
+        }
+      ]}
+    >
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.text }]}>
+          Circle Challenge
+        </Text>
+        <Text style={[styles.instruction, { color: colors.textSecondary }]}>
+          Draw a circle on the canvas below. Try to make it as round as possible!
+        </Text>
+      </View>
+
+      <View style={[styles.canvasContainer, { backgroundColor: colors.card }]}>
+        <View style={styles.targetGuide}>
+          <View style={[styles.guideLine, { borderColor: colors.primary + '40' }]} />
+          <Text style={[styles.guideText, { color: colors.textSecondary }]}>
+            Try to draw a circle here
           </Text>
         </View>
+        
+        <TouchDrawingCanvas
+          onDrawingComplete={handleDrawingComplete}
+          style={[styles.canvas, { 
+            width: canvasWidth, 
+            height: canvasHeight,
+            backgroundColor: colors.card 
+          }]}
+        />
       </View>
-    );
-  }
 
-  return null;
+      <View style={styles.controls}>
+        {drawnPath.length > 0 && !challengeComplete && (
+          <Button
+            title="Try Again"
+            onPress={handleRetry}
+            variant="outline"
+            size="medium"
+            style={styles.retryButton}
+          />
+        )}
+        
+        {challengeComplete && (
+          <View style={styles.completionMessage}>
+            <Text style={[styles.completionText, { color: colors.primary }]}>
+              🎉 Great job! Your circle drawing skills are improving!
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.tips}>
+        <Text style={[styles.tipsTitle, { color: colors.text }]}>💡 Tips:</Text>
+        <Text style={[styles.tipText, { color: colors.textSecondary }]}>
+          • Start slow and focus on smooth, curved movements
+        </Text>
+        <Text style={[styles.tipText, { color: colors.textSecondary }]}>
+          • Try to connect the start and end points
+        </Text>
+        <Text style={[styles.tipText, { color: colors.textSecondary }]}>
+          • Practice makes perfect - don't worry about being perfect!
+        </Text>
+      </View>
+    </Animated.View>
+  );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    padding: 20,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  instruction: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  canvasContainer: {
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 30,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  targetGuide: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -75 }, { translateY: -75 }],
+    width: 150,
+    height: 150,
+    alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
+  },
+  guideLine: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    position: 'absolute',
+  },
+  guideText: {
+    fontSize: 12,
+    textAlign: 'center',
+    opacity: 0.7,
+  },
+  canvas: {
+    borderRadius: 12,
+    zIndex: 2,
+  },
+  controls: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    paddingHorizontal: 30,
+  },
+  completionMessage: {
     alignItems: 'center',
     padding: 20,
   },
-  welcomeContent: {
-    alignItems: 'center',
-    maxWidth: 320,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  subtitle: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#4A90E2',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  encouragement: {
+  completionText: {
     fontSize: 18,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  circleExample: {
-    marginBottom: 40,
-  },
-  exampleCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: '#4A90E2',
-    borderStyle: 'dashed',
-  },
-  startButton: {
-    fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
-    backgroundColor: '#4A90E2',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 25,
     textAlign: 'center',
-    overflow: 'hidden',
   },
-  drawingHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
+  tips: {
+    marginTop: 20,
   },
-  drawingTitle: {
-    fontSize: 24,
+  tipsTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#1A1A1A',
     marginBottom: 8,
   },
-  drawingSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  drawingFooter: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  encouragingText: {
-    fontSize: 16,
-    color: '#4A90E2',
-    fontWeight: '500',
-  },
-  celebrationContent: {
-    alignItems: 'center',
-    maxWidth: 320,
-  },
-  celebrationTitle: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: '#1A1A1A',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  celebrationText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#4A90E2',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  celebrationSubtext: {
-    fontSize: 18,
-    color: '#374151',
-    textAlign: 'left',
-    lineHeight: 28,
-    marginBottom: 30,
-  },
-  transformationMessage: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#10B981',
-    textAlign: 'center',
-    marginBottom: 30,
-    lineHeight: 28,
-  },
-  continueButton: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    backgroundColor: '#10B981',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 25,
-    textAlign: 'center',
-    overflow: 'hidden',
+  tipText: {
+    fontSize: 14,
+    marginBottom: 4,
+    paddingLeft: 8,
   },
 });
+
+export default CircleChallenge;

@@ -1,160 +1,169 @@
-// src/components/drawing/DrawAnythingCanvas.tsx
-import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import { View, ViewStyle, Dimensions, PanResponder } from 'react-native';
+import React, { useRef, useImperativeHandle, forwardRef, useState, useCallback } from 'react';
+import { View, PanGestureHandler, PanGestureHandlerGestureEvent, ViewStyle } from 'react-native';
+import { State } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
-import { ShapeType, Point, DrawingPath } from '@/types/drawing';
+import { useDrawing } from '@/context/DrawingContext';
 import { detectShape } from '@/utils/drawing/shapeDetection';
-import { hapticFeedback } from '@/utils/platform/haptics';
+import { Point } from '@/types/drawing';
 
 export interface DrawAnythingCanvasProps {
-  width?: number;
-  height?: number;
   style?: ViewStyle;
-  strokeColor?: string;
-  strokeWidth?: number;
-  backgroundColor?: string;
-  
-  // ✅ ADD MISSING PROPS
-  onDrawingComplete?: (shape: ShapeType, drawing: any) => void;
-  onShapeDetected?: (shape: ShapeType) => void;
-  onDrawingStart?: () => void;
-  onDrawingEnd?: () => void;
+  onShapeDetected?: (shape: string) => void;
+  showGuides?: boolean;
+  enableShapeDetection?: boolean;
 }
 
 export interface DrawAnythingCanvasRef {
-  clear: () => void;
-  undo: () => void;
-  redo: () => void;
-  getDrawing: () => DrawingPath[];
-  setDrawing: (paths: DrawingPath[]) => void;
+  clearCanvas: () => void;
+  getCurrentPath: () => Point[];
 }
 
-export const DrawAnythingCanvas = forwardRef<DrawAnythingCanvasRef, DrawAnythingCanvasProps>(({
-  width = Dimensions.get('window').width - 40,
-  height = 400,
-  style,
-  strokeColor = '#007AFF',
-  strokeWidth = 3,
-  backgroundColor = 'transparent',
-  onDrawingComplete,
-  onShapeDetected,
-  onDrawingStart,
-  onDrawingEnd,
-}, ref) => {
-  const [paths, setPaths] = useState<DrawingPath[]>([]);
-  const [currentPath, setCurrentPath] = useState<Point[]>([]);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const pathId = useRef(0);
+export const DrawAnythingCanvas = forwardRef<DrawAnythingCanvasRef, DrawAnythingCanvasProps>(
+  ({ style, onShapeDetected, showGuides = false, enableShapeDetection = true }, ref) => {
+    const { 
+      state: drawingState, 
+      startDrawing, 
+      addPoint, 
+      endDrawing,
+      clearCanvas 
+    } = useDrawing();
+    
+    const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
 
-  useImperativeHandle(ref, () => ({
-    clear: () => {
-      setPaths([]);
-      setCurrentPath([]);
-    },
-    undo: () => {
-      setPaths(prev => prev.slice(0, -1));
-    },
-    redo: () => {
-      // Implementation would require redo stack
-    },
-    getDrawing: () => paths,
-    setDrawing: (newPaths: DrawingPath[]) => {
-      setPaths(newPaths);
-    },
-  }));
+    useImperativeHandle(ref, () => ({
+      clearCanvas: () => {
+        clearCanvas();
+        setCurrentStroke([]);
+      },
+      getCurrentPath: () => currentStroke,
+    }));
 
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: () => true,
-
-    onPanResponderGrant: (evt) => {
-      const { locationX, locationY } = evt.nativeEvent;
-      const point: Point = { x: locationX, y: locationY };
+    const handleGestureEvent = useCallback((event: PanGestureHandlerGestureEvent) => {
+      const { translationX, translationY, absoluteX, absoluteY } = event.nativeEvent;
       
-      setCurrentPath([point]);
-      setIsDrawing(true);
-      onDrawingStart?.();
-      
-      // Light haptic feedback on draw start
-      hapticFeedback.light();
-    },
-
-    onPanResponderMove: (evt) => {
-      if (!isDrawing) return;
-      
-      const { locationX, locationY } = evt.nativeEvent;
-      const point: Point = { x: locationX, y: locationY };
-      
-      setCurrentPath(prev => [...prev, point]);
-    },
-
-    onPanResponderRelease: () => {
-      if (!isDrawing || currentPath.length === 0) return;
-
-      // Create drawing path
-      const drawingPath: DrawingPath = {
-        id: `path-${pathId.current++}`,
-        points: currentPath,
-        color: strokeColor,
-        width: strokeWidth,
-        timestamp: Date.now(),
+      // Convert screen coordinates to canvas coordinates
+      const point: Point = {
+        x: absoluteX,
+        y: absoluteY,
       };
 
-      setPaths(prev => [...prev, drawingPath]);
-      
-      // Detect shape from current path points
-      const detectionResult = detectShape([drawingPath]); // ✅ FIX: Pass DrawingPath array
-      if (detectionResult && detectionResult.confidence > 0.6) { // ✅ FIX: Check for null
-        // Success haptic feedback
-        hapticFeedback.success();
-        onShapeDetected?.(detectionResult.type);
-        onDrawingComplete?.(detectionResult.type, { paths: [...paths, drawingPath], detectedShape: detectionResult });
+      if (drawingState.isDrawing) {
+        addPoint(point);
+        setCurrentStroke(prev => [...prev, point]);
       }
+    }, [drawingState.isDrawing, addPoint]);
 
-      setCurrentPath([]);
-      setIsDrawing(false);
-      onDrawingEnd?.();
-    },
-  });
+    const handleStateChange = useCallback((event: PanGestureHandlerGestureEvent) => {
+      const { state, absoluteX, absoluteY } = event.nativeEvent;
+      
+      const point: Point = {
+        x: absoluteX,
+        y: absoluteY,
+      };
 
-  const createPathData = (points: Point[]): string => {
-    if (points.length < 2) return '';
-    
-    let pathData = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      pathData += ` L ${points[i].x} ${points[i].y}`;
-    }
-    return pathData;
-  };
+      switch (state) {
+        case State.BEGAN:
+          startDrawing(point);
+          setCurrentStroke([point]);
+          break;
+          
+        case State.END:
+        case State.CANCELLED:
+          endDrawing();
+          
+          // ✅ FIXED: Shape detection with proper Point array
+          if (enableShapeDetection && currentStroke.length > 3) {
+            const detectionResult = detectShape(currentStroke); // ✅ FIXED: Pass Point array directly
+            if (detectionResult && onShapeDetected) {
+              onShapeDetected(detectionResult.type);
+            }
+          }
+          
+          setCurrentStroke([]);
+          break;
+      }
+    }, [startDrawing, endDrawing, enableShapeDetection, onShapeDetected, currentStroke]);
 
-  return (
-    <View style={[{ width, height, backgroundColor }, style]} {...panResponder.panHandlers}>
-      <Svg width={width} height={height} style={{ position: 'absolute' }}>
-        {/* Render completed paths */}
-        {paths.map((path) => (
-          <Path
-            key={path.id}
-            d={createPathData(path.points)}
-            stroke={path.color}
-            strokeWidth={path.width}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ))}
-        
-        {/* Render current drawing path */}
-        {currentPath.length > 1 && (
-          <Path
-            d={createPathData(currentPath)}
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        )}
-      </Svg>
-    </View>
-  );
-});
+    const renderPath = (points: Point[]): string => {
+      if (points.length < 2) return '';
+      
+      let path = `M ${points[0].x} ${points[0].y}`;
+      
+      for (let i = 1; i < points.length; i++) {
+        path += ` L ${points[i].x} ${points[i].y}`;
+      }
+      
+      return path;
+    };
+
+    const renderCurrentStroke = (): string => {
+      return renderPath(currentStroke);
+    };
+
+    const renderCompletedStrokes = () => {
+      return drawingState.strokes.map((stroke, index) => (
+        <Path
+          key={stroke.id || index}
+          d={renderPath(stroke.path.points)}
+          stroke={stroke.path.color}
+          strokeWidth={stroke.path.width}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ));
+    };
+
+    return (
+      <PanGestureHandler
+        onGestureEvent={handleGestureEvent}
+        onHandlerStateChange={handleStateChange}
+        minPointers={1}
+        maxPointers={1}
+      >
+        <View style={[{ flex: 1 }, style]}>
+          <Svg style={{ flex: 1 }} width="100%" height="100%">
+            {/* Render completed strokes */}
+            {renderCompletedStrokes()}
+            
+            {/* Render current stroke */}
+            {currentStroke.length > 1 && (
+              <Path
+                d={renderCurrentStroke()}
+                stroke={drawingState.color}
+                strokeWidth={drawingState.brushSize}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity={drawingState.opacity}
+              />
+            )}
+            
+            {/* Guide lines if enabled */}
+            {showGuides && (
+              <>
+                {/* Center guidelines */}
+                <Path
+                  d="M 50% 0 L 50% 100%"
+                  stroke="rgba(0, 122, 255, 0.3)"
+                  strokeWidth={1}
+                  strokeDasharray="5,5"
+                />
+                <Path
+                  d="M 0 50% L 100% 50%"
+                  stroke="rgba(0, 122, 255, 0.3)"
+                  strokeWidth={1}
+                  strokeDasharray="5,5"
+                />
+              </>
+            )}
+          </Svg>
+        </View>
+      </PanGestureHandler>
+    );
+  }
+);
+
+DrawAnythingCanvas.displayName = 'DrawAnythingCanvas';
+
+export default DrawAnythingCanvas;
