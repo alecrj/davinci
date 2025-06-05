@@ -1,63 +1,31 @@
-// app/index.tsx - FIXED MAIN INDEX WITH ALL PROPERTIES
 import { useEffect } from 'react';
-import { Redirect } from 'expo-router';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { Text } from '@/components/Themed';
-import { useTheme } from '@/context/ThemeContext';
+import { View, ActivityIndicator } from 'react-native';
+import { router } from 'expo-router';
 import { useUserProgress } from '@/context/UserProgressContext';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function Index() {
-  const { theme } = useTheme();
-  const { colors } = theme;
-  // ✅ FIXED: Use correct properties from context
-  const { progress, isLoading } = useUserProgress();
+  const { progress } = useUserProgress();
+  const { colors } = useTheme();
 
   useEffect(() => {
-    // Initialize any app-level logic here
-  }, []);
-
-  // ✅ FIXED: Check for proper onboarding completion
-  useEffect(() => {
-    if (!isLoading && !progress.hasCompletedOnboarding) {
-      // User needs to complete onboarding
+    // Check if user has completed onboarding
+    if (progress.hasCompletedOnboarding) {
+      router.replace('/(tabs)/home');
+    } else {
+      router.replace('/onboarding/welcome');
     }
-  }, [isLoading, progress.hasCompletedOnboarding, progress.hasCompletedAssessment]);
+  }, [progress.hasCompletedOnboarding]);
 
-  if (isLoading) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          Loading DaVinci...
-        </Text>
-      </View>
-    );
-  }
-
-  // Check onboarding completion
-  if (!progress.hasCompletedOnboarding) {
-    return <Redirect href="/onboarding/enhanced-assessment" />;
-  }
-
-  // Check assessment completion
-  if (!progress.hasCompletedAssessment) {
-    return <Redirect href="/assessment" />;
-  }
-
-  // Default to main app
-  return <Redirect href="/(tabs)" />;
+  // Show loading indicator while checking
+  return (
+    <View style={{ 
+      flex: 1, 
+      justifyContent: 'center', 
+      alignItems: 'center',
+      backgroundColor: colors.background 
+    }}>
+      <ActivityIndicator size="large" color={colors.primary} />
+    </View>
+  );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    textAlign: 'center',
-  },
-});

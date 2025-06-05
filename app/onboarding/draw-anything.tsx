@@ -1,4 +1,3 @@
-// app/onboarding/draw-anything.tsx - FIXED CONTEXT PROPERTIES
 import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, Animated } from 'react-native';
 import { router } from 'expo-router';
@@ -17,13 +16,22 @@ export default function DrawAnythingOnboardingScreen() {
   const { colors } = theme;
   const { updateProgress } = useUserProgress();
   
+  const [currentStep, setCurrentStep] = useState(1); // Track which shape we're on
+  const [completedShapes, setCompletedShapes] = useState<string[]>([]);
   const [showTransformation, setShowTransformation] = useState(false);
   const [detectedShape, setDetectedShape] = useState<ShapeType>('unknown');
   const [userDrawing, setUserDrawing] = useState<any>(null);
-  const [hasDrawn, setHasDrawn] = useState(false);
   
   const [fadeAnim] = useState(new Animated.Value(0));
   const canvasRef = useRef<any>(null);
+
+  const shapes = [
+    { instruction: "Draw a simple circle", emoji: "⭕", expected: "circle" },
+    { instruction: "Draw a wavy line like ocean waves", emoji: "🌊", expected: "wave" },
+    { instruction: "Draw a triangle - any size!", emoji: "🔺", expected: "triangle" },
+  ];
+
+  const currentShape = shapes[currentStep - 1];
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -37,7 +45,6 @@ export default function DrawAnythingOnboardingScreen() {
     const validShape = sanitizeShapeType(shape);
     setDetectedShape(validShape);
     setUserDrawing({ shape: validShape, timestamp: Date.now() });
-    setHasDrawn(true);
     
     uiHaptics.shapeDetected();
     
@@ -48,39 +55,35 @@ export default function DrawAnythingOnboardingScreen() {
 
   const handleTransformationComplete = () => {
     setShowTransformation(false);
+    setCompletedShapes([...completedShapes, detectedShape]);
     
-    // ✅ FIXED: Use correct UserProgress properties
-    updateProgress({
-      currentLevel: 1,
-      xp: 50, // ✅ FIXED: This property now exists in context
-      streakDays: 1,
-      lastActivity: new Date().toISOString(),
-    });
-    
-    uiHaptics.celebration();
-    
-    setTimeout(() => {
-      router.replace('/');
-    }, 1000);
-  };
-
-  const handleSkip = () => {
-    // ✅ FIXED: Use correct UserProgress properties
-    updateProgress({
-      currentLevel: 1,
-      xp: 10, // ✅ FIXED: This property now exists in context
-      streakDays: 1,
-      lastActivity: new Date().toISOString(),
-    });
-    
-    router.replace('/');
+    if (currentStep < 3) {
+      // Move to next shape
+      setCurrentStep(currentStep + 1);
+      handleClear();
+    } else {
+      // All shapes complete - update progress and move to artist setup
+      updateProgress({
+        hasCompletedOnboarding: false, // Not done yet!
+        currentLevel: 1,
+        xp: 150, // Big XP for completing transformation
+        streakDays: 1,
+        lastActivity: new Date().toISOString(),
+      });
+      
+      uiHaptics.celebration();
+      
+      // Move to artist setup
+      setTimeout(() => {
+        router.push('/onboarding/artist-setup');
+      }, 1000);
+    }
   };
 
   const handleClear = () => {
     if (canvasRef.current) {
       canvasRef.current.clearCanvas();
     }
-    setHasDrawn(false);
     setDetectedShape('unknown');
     setUserDrawing(null);
     setShowTransformation(false);
@@ -108,15 +111,34 @@ export default function DrawAnythingOnboardingScreen() {
         }
       ]}
     >
+      {/* Progress indicators */}
+      <View style={styles.progressContainer}>
+        {shapes.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.progressDot,
+              { backgroundColor: colors.border },
+              index < currentStep && { backgroundColor: colors.primary },
+            ]}
+          />
+        ))}
+      </View>
+
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          Draw Anything
+        <Text style={[styles.stepText, { color: colors.textSecondary }]}>
+          Step {currentStep} of 3
         </Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Let's see what you can create! Draw anything that comes to mind.
+        <Text style={[styles.title, { color: colors.text }]}>
+          {currentShape.emoji} {currentShape.instruction}
         </Text>
         <Text style={[styles.encouragement, { color: colors.primary }]}>
-          There's no right or wrong - just express yourself! ✨
+          {currentStep === 1 
+            ? "Don't worry about perfection - just draw!"
+            : currentStep === 2 
+            ? "You're doing great! Keep going!"
+            : "One more - you're almost an artist!"
+          }
         </Text>
       </View>
 
@@ -128,63 +150,28 @@ export default function DrawAnythingOnboardingScreen() {
           showGuides={false}
           enableShapeDetection={true}
         />
-        
-        {!hasDrawn && (
-          <View style={styles.canvasOverlay}>
-            <Text style={[styles.overlayText, { color: colors.textSecondary }]}>
-              Tap and draw on the canvas
-            </Text>
-          </View>
-        )}
       </View>
 
       <View style={styles.controls}>
-        <View style={styles.buttonRow}>
-          {hasDrawn && (
-            <Button
-              title="Clear"
-              onPress={handleClear}
-              variant="outline"
-              size="medium"
-              style={styles.clearButton}
-            />
-          )}
-          
-          <Button
-            title="Skip for now"
-            onPress={handleSkip}
-            variant="ghost"
-            size="medium"
-            style={styles.skipButton}
-          />
+        <Button
+          title="Clear"
+          onPress={handleClear}
+          variant="outline"
+          size="medium"
+          style={styles.clearButton}
+        />
+      </View>
+
+      {/* Show completed shapes */}
+      {completedShapes.length > 0 && (
+        <View style={styles.completedContainer}>
+          <Text style={[styles.completedText, { color: colors.textSecondary }]}>
+            Completed: {completedShapes.map((shape, i) => 
+              i === 0 ? '✅ Circle' : i === 1 ? ' ✅ Waves' : ''
+            ).join('')}
+          </Text>
         </View>
-
-        {hasDrawn && (
-          <View style={styles.detectionInfo}>
-            <Text style={[styles.detectionText, { color: colors.textSecondary }]}>
-              🎨 Great work! I can see you're getting creative.
-            </Text>
-            {detectedShape !== 'unknown' && (
-              <Text style={[styles.shapeDetected, { color: colors.primary }]}>
-                I detected a {detectedShape}! ✨
-              </Text>
-            )}
-          </View>
-        )}
-      </View>
-
-      <View style={styles.tips}>
-        <Text style={[styles.tipsTitle, { color: colors.text }]}>💡 Quick Tips:</Text>
-        <Text style={[styles.tipText, { color: colors.textSecondary }]}>
-          • Try drawing simple shapes like circles, squares, or hearts
-        </Text>
-        <Text style={[styles.tipText, { color: colors.textSecondary }]}>
-          • Don't worry about perfection - we'll help you improve!
-        </Text>
-        <Text style={[styles.tipText, { color: colors.textSecondary }]}>
-          • Have fun and let your creativity flow!
-        </Text>
-      </View>
+      )}
     </Animated.View>
   );
 }
@@ -194,21 +181,31 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  progressContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  progressDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
   header: {
     alignItems: 'center',
     marginBottom: 30,
-    paddingTop: 40,
+  },
+  stepText: {
+    fontSize: 14,
+    marginBottom: 8,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 18,
     textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: 8,
   },
   encouragement: {
     fontSize: 16,
@@ -219,75 +216,26 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: 30,
+    marginBottom: 20,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    position: 'relative',
   },
   canvas: {
     flex: 1,
   },
-  canvasOverlay: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -75 }, { translateY: -20 }],
-    alignItems: 'center',
-    justifyContent: 'center',
-    pointerEvents: 'none',
-  },
-  overlayText: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.6,
-  },
   controls: {
     marginBottom: 20,
   },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
   clearButton: {
-    flex: 1,
-    marginRight: 10,
+    width: '100%',
   },
-  skipButton: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  detectionInfo: {
+  completedContainer: {
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    borderRadius: 12,
   },
-  detectionText: {
+  completedText: {
     fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  shapeDetected: {
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  tips: {
-    marginTop: 10,
-  },
-  tipsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  tipText: {
-    fontSize: 14,
-    marginBottom: 4,
-    paddingLeft: 8,
   },
 });
