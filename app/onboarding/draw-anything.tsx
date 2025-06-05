@@ -1,3 +1,4 @@
+// app/onboarding/draw-anything.tsx - FIXED CONTEXT PROPERTIES
 import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, Animated } from 'react-native';
 import { router } from 'expo-router';
@@ -25,7 +26,6 @@ export default function DrawAnythingOnboardingScreen() {
   const canvasRef = useRef<any>(null);
 
   useEffect(() => {
-    // Fade in animation
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
@@ -34,16 +34,13 @@ export default function DrawAnythingOnboardingScreen() {
   }, []);
 
   const handleShapeDetected = (shape: string) => {
-    // ✅ FIXED: Safely convert string to ShapeType
     const validShape = sanitizeShapeType(shape);
     setDetectedShape(validShape);
     setUserDrawing({ shape: validShape, timestamp: Date.now() });
     setHasDrawn(true);
     
-    // Trigger haptic feedback
     uiHaptics.shapeDetected();
     
-    // Show transformation after a brief delay
     setTimeout(() => {
       setShowTransformation(true);
     }, 500);
@@ -52,29 +49,26 @@ export default function DrawAnythingOnboardingScreen() {
   const handleTransformationComplete = () => {
     setShowTransformation(false);
     
-    // Update user progress
+    // ✅ FIXED: Use correct UserProgress properties
     updateProgress({
       currentLevel: 1,
-      xp: 50,
+      xp: 50, // ✅ FIXED: This property now exists in context
       streakDays: 1,
-      // ✅ FIXED: Remove non-existent property
       lastActivity: new Date().toISOString(),
     });
     
-    // Trigger celebration haptic
     uiHaptics.celebration();
     
-    // Navigate to main app
     setTimeout(() => {
       router.replace('/');
     }, 1000);
   };
 
   const handleSkip = () => {
-    // Update progress without drawing
+    // ✅ FIXED: Use correct UserProgress properties
     updateProgress({
       currentLevel: 1,
-      xp: 10,
+      xp: 10, // ✅ FIXED: This property now exists in context
       streakDays: 1,
       lastActivity: new Date().toISOString(),
     });
@@ -97,7 +91,7 @@ export default function DrawAnythingOnboardingScreen() {
   if (showTransformation) {
     return (
       <MagicTransformation
-        shape={detectedShape} // ✅ FIXED: Pass shape prop correctly
+        shape={detectedShape}
         userDrawing={userDrawing}
         onComplete={handleTransformationComplete}
       />

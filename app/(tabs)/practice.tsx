@@ -1,12 +1,13 @@
+// app/(tabs)/practice.tsx - FIXED HAPTICS AND STYLE TYPES
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Dimensions, Alert } from 'react-native';
+import { View, StyleSheet, Dimensions, Alert, StyleProp, ViewStyle } from 'react-native';
 import { Text } from '@/components/Themed';
 import { DrawAnythingCanvas, MagicTransformation } from '@/components/drawing';
 import { Button } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
 import { useDrawing } from '@/context/DrawingContext';
-import { haptics } from '@/utils/haptics';
-import { ShapeType, sanitizeShapeType } from '@/types/drawing'; // ✅ FIXED: Import helper
+import { uiHaptics } from '@/utils/haptics'; // ✅ FIXED: Import from correct path with all methods
+import { ShapeType, sanitizeShapeType } from '@/types/drawing';
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,15 +21,13 @@ export default function PracticeScreen() {
   const [userDrawing, setUserDrawing] = useState<any>(null);
 
   const handleShapeDetected = (shape: string) => {
-    // ✅ FIXED: Safely convert string to ShapeType
     const validShape = sanitizeShapeType(shape);
     setDetectedShape(validShape);
     setUserDrawing(drawingState.strokes);
     
-    // Trigger haptic feedback
-    haptics.shapeDetected();
+    // ✅ FIXED: Use uiHaptics with correct method
+    uiHaptics.shapeDetected();
     
-    // Show transformation after a brief delay
     setTimeout(() => {
       setShowTransformation(true);
     }, 500);
@@ -54,7 +53,8 @@ export default function PracticeScreen() {
           style: 'destructive',
           onPress: () => {
             clearCanvas();
-            haptics.actionSuccess();
+            // ✅ FIXED: Use uiHaptics with correct method
+            uiHaptics.actionSuccess();
           },
         },
       ]
@@ -64,12 +64,18 @@ export default function PracticeScreen() {
   if (showTransformation) {
     return (
       <MagicTransformation
-        shape={detectedShape} // ✅ FIXED: Pass shape prop correctly
+        shape={detectedShape}
         userDrawing={userDrawing}
         onComplete={handleTransformationComplete}
       />
     );
   }
+
+  // ✅ FIXED: Proper style prop typing
+  const canvasStyle: StyleProp<ViewStyle> = [
+    styles.canvas, 
+    { backgroundColor: colors.card }
+  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -82,7 +88,7 @@ export default function PracticeScreen() {
 
       <View style={styles.canvasContainer}>
         <DrawAnythingCanvas
-          style={[styles.canvas, { backgroundColor: colors.card }]} // ✅ FIXED: Proper style object
+          style={canvasStyle} // ✅ FIXED: Proper style prop
           onShapeDetected={handleShapeDetected}
           showGuides={true}
           enableShapeDetection={true}
@@ -122,8 +128,8 @@ export default function PracticeScreen() {
           <Button
             title="Undo"
             onPress={() => {
-              // Implement undo functionality
-              haptics.buttonPress();
+              // ✅ FIXED: Use uiHaptics with correct method
+              uiHaptics.buttonPress();
             }}
             variant="secondary"
             size="medium"

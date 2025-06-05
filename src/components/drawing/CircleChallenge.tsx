@@ -1,5 +1,6 @@
+// src/components/drawing/CircleChallenge.tsx - FIXED STYLE ARRAY TYPES
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, Animated } from 'react-native';
+import { View, StyleSheet, Dimensions, Animated, StyleProp, ViewStyle } from 'react-native';
 import { Text } from '@/components/Themed';
 import { TouchDrawingCanvas, MagicTransformation } from '@/components/drawing';
 import { Button } from '@/components/ui';
@@ -118,6 +119,16 @@ export const CircleChallenge: React.FC<CircleChallengeProps> = ({ onComplete }) 
     );
   }
 
+  // ✅ FIXED: Proper style prop typing
+  const canvasStyle: StyleProp<ViewStyle> = [
+    styles.canvas, 
+    { 
+      width: canvasWidth, 
+      height: canvasHeight,
+      backgroundColor: colors.card 
+    }
+  ];
+
   return (
     <Animated.View 
       style={[
@@ -148,11 +159,7 @@ export const CircleChallenge: React.FC<CircleChallengeProps> = ({ onComplete }) 
         
         <TouchDrawingCanvas
           onDrawingComplete={handleDrawingComplete}
-          style={[styles.canvas, { 
-            width: canvasWidth, 
-            height: canvasHeight,
-            backgroundColor: colors.card 
-          }]}
+          style={canvasStyle} // ✅ FIXED: Proper style prop
         />
       </View>
 

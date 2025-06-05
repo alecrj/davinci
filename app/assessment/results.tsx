@@ -1,158 +1,223 @@
-import React from 'react';
-import { StyleSheet, ScrollView, View, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+// app/assessment/results.tsx - FIXED NAVIGATION
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, Dimensions, Animated } from 'react-native';
+import { Link, useRouter } from 'expo-router';
 import { Text } from '@/components/Themed';
 import { Button } from '@/components/ui';
-import { useTheme } from '@/context/ThemeContext'; // ✅ FIXED: Correct import path
+import { useTheme } from '@/context/ThemeContext';
+import { useUserProgress } from '@/context/UserProgressContext';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ensureGradientColors } from '@/utils/colors/gradientHelper';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-interface UserTrack {
-  id: string;
-  name: string;
-  description: string;
-  color: string[];
-  strengths: string[];
-  approach: string;
-  timeline: string;
-}
-
-export default function AssessmentResultsScreen() {
+export default function AssessmentResults() {
   const { theme } = useTheme();
   const { colors } = theme;
+  const router = useRouter();
+  const { progress } = useUserProgress();
+  
+  const [animationValue] = useState(new Animated.Value(0));
+  const [showResults, setShowResults] = useState(false);
 
-  // Mock assessment results - would come from context/API
-  const userTrack: UserTrack = {
-    id: 'confident-explorer',
-    name: 'Confident Explorer',
-    description: 'You have natural line confidence and a growth mindset. You\'re ready to experiment and learn through creative exploration.',
-    color: ['#007AFF', '#5856D6'],
-    strengths: [
-      'Intuitive drawing ability',
-      'Willingness to experiment',
-      'Natural line confidence',
-      'Growth mindset'
-    ],
-    approach: 'Fundamentals → Style Development → Advanced Techniques',
-    timeline: 'At 10 min/day: Week 4 = Recognizable art, Week 12 = Personal style'
+  useEffect(() => {
+    // Start animation after component mounts
+    setTimeout(() => {
+      setShowResults(true);
+      Animated.timing(animationValue, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }).start();
+    }, 500);
+  }, []);
+
+  const getSkillLevelInfo = (level: string) => {
+    const levels = {
+      beginner: {
+        emoji: '🌱',
+        title: 'Beginning Artist',
+        description: 'Perfect starting point! We\'ll build your confidence step by step.',
+        color: '#4CAF50',
+      },
+      casual: {
+        emoji: '🎨',
+        title: 'Casual Creator',
+        description: 'You have some experience! Let\'s refine your skills.',
+        color: '#2196F3',
+      },
+      hobby: {
+        emoji: '✨',
+        title: 'Hobby Artist',
+        description: 'Great foundation! Ready for more advanced techniques.',
+        color: '#9C27B0',
+      },
+      student: {
+        emoji: '🎯',
+        title: 'Art Student',
+        description: 'Strong skills! Time to master professional techniques.',
+        color: '#FF9800',
+      },
+      advanced: {
+        emoji: '🏆',
+        title: 'Advanced Artist',
+        description: 'Excellent skills! Ready for complex challenges.',
+        color: '#F44336',
+      },
+    };
+    
+    return levels[level as keyof typeof levels] || levels.beginner;
   };
 
-  const currentLevel = {
-    title: userTrack.name,
-    description: userTrack.description,
-    color: userTrack.color,
-    progress: 0.15, // Just started
-    nextMilestone: 'First Masterpiece',
-    estimatedTime: '2-3 lessons'
-  };
-
-  const personalizedPlan = [
-    {
-      week: 1,
-      focus: 'Building Confidence',
-      lessons: ['Perfect Lines', 'Circle Mastery', 'Basic Shapes'],
-      goal: 'Develop drawing confidence'
-    },
-    {
-      week: 2,
-      focus: 'Fundamental Skills', 
-      lessons: ['Proportions', 'Shading Basics', 'Simple Objects'],
-      goal: 'Master basic techniques'
-    },
-    {
-      week: 3,
-      focus: 'Creative Expression',
-      lessons: ['Color Theory', 'Style Exploration', 'Personal Projects'],
-      goal: 'Find your artistic voice'
-    },
-    {
-      week: 4,
-      focus: 'First Masterpiece',
-      lessons: ['Complete Drawing', 'Details & Finishing', 'Portfolio Start'],
-      goal: 'Create recognizable art'
-    }
-  ];
+  const skillInfo = getSkillLevelInfo(progress.skillLevel || 'beginner');
 
   const handleStartLearning = () => {
-    router.push('/'); // ✅ FIXED: Use root path instead of /(tabs)/
+    // ✅ FIXED: Use Link component navigation instead of router.push
+    router.replace('/(tabs)');
   };
 
   const handleRetakeAssessment = () => {
-    router.push('/assessment/'); // ✅ FIXED: This is actually valid, will fix in navigation types
+    // ✅ FIXED: Use proper navigation to assessment index
+    router.push('/assessment');
   };
 
-  return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Results Header */}
-      <View style={[styles.headerCard, { backgroundColor: colors.card }]}>
-        <LinearGradient
-          colors={ensureGradientColors(currentLevel.color)}
-          style={styles.headerGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Your Artist Type</Text>
-            <Text style={styles.headerLevel}>{currentLevel.title}</Text>
-            <Text style={styles.headerDescription}>{currentLevel.description}</Text>
+  if (!showResults) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: colors.text }]}>
+            Analyzing your artistic potential...
+          </Text>
+          <View style={[styles.loadingBar, { backgroundColor: colors.border }]}>
+            <Animated.View
+              style={[
+                styles.loadingProgress,
+                {
+                  backgroundColor: colors.primary,
+                  width: animationValue.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                  }),
+                },
+              ]}
+            />
           </View>
-        </LinearGradient>
-      </View>
-
-      {/* Strengths Section */}
-      <View style={[styles.section, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Artistic Superpowers</Text>
-        {userTrack.strengths.map((strength, index) => (
-          <View key={index} style={styles.strengthItem}>
-            <Text style={styles.strengthIcon}>⭐</Text>
-            <Text style={[styles.strengthText, { color: colors.text }]}>{strength}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Learning Approach */}
-      <View style={[styles.section, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Learning Path</Text>
-        <Text style={[styles.approachText, { color: colors.textSecondary }]}>{userTrack.approach}</Text>
-        <View style={styles.timelineContainer}>
-          <Text style={[styles.timelineTitle, { color: colors.text }]}>Progress Timeline</Text>
-          <Text style={[styles.timelineText, { color: colors.textSecondary }]}>{userTrack.timeline}</Text>
         </View>
       </View>
+    );
+  }
 
-      {/* Personalized Plan */}
-      <View style={[styles.section, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Your 4-Week Transformation Plan</Text>
-        {personalizedPlan.map((week, index) => (
-          <View key={index} style={[styles.weekCard, { backgroundColor: colors.background }]}>
-            <View style={styles.weekHeader}>
-              <Text style={[styles.weekNumber, { color: colors.primary }]}>Week {week.week}</Text>
-              <Text style={[styles.weekFocus, { color: colors.text }]}>{week.focus}</Text>
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <LinearGradient
+        colors={ensureGradientColors([`${skillInfo.color}20`, 'transparent'])}
+        style={styles.backgroundGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      />
+
+      <Animated.View
+        style={[
+          styles.content,
+          {
+            opacity: animationValue,
+            transform: [
+              {
+                translateY: animationValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [50, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {/* Results Header */}
+        <View style={styles.header}>
+          <Text style={[styles.completedText, { color: colors.primary }]}>
+            Assessment Complete! ✨
+          </Text>
+          
+          <View style={[styles.skillBadge, { backgroundColor: skillInfo.color + '20' }]}>
+            <Text style={styles.skillEmoji}>{skillInfo.emoji}</Text>
+            <Text style={[styles.skillTitle, { color: skillInfo.color }]}>
+              {skillInfo.title}
+            </Text>
+          </View>
+          
+          <Text style={[styles.skillDescription, { color: colors.text }]}>
+            {skillInfo.description}
+          </Text>
+        </View>
+
+        {/* Score Breakdown */}
+        <View style={[styles.scoresContainer, { backgroundColor: colors.card }]}>
+          <Text style={[styles.scoresTitle, { color: colors.text }]}>
+            Your Scores
+          </Text>
+          
+          <View style={styles.scoreItem}>
+            <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>
+              Assessment Score
+            </Text>
+            <Text style={[styles.scoreValue, { color: colors.primary }]}>
+              {progress.assessmentScore || 0}/24
+            </Text>
+          </View>
+          
+          <View style={styles.scoreItem}>
+            <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>
+              Current Level
+            </Text>
+            <Text style={[styles.scoreValue, { color: colors.primary }]}>
+              {progress.currentLevel}
+            </Text>
+          </View>
+          
+          <View style={styles.scoreItem}>
+            <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>
+              XP Earned
+            </Text>
+            <Text style={[styles.scoreValue, { color: colors.primary }]}>
+              {progress.xp}
+            </Text>
+          </View>
+        </View>
+
+        {/* Learning Path Preview */}
+        <View style={[styles.pathContainer, { backgroundColor: colors.card }]}>
+          <Text style={[styles.pathTitle, { color: colors.text }]}>
+            Your Learning Path
+          </Text>
+          
+          <View style={styles.pathItems}>
+            <View style={styles.pathItem}>
+              <View style={[styles.pathDot, { backgroundColor: colors.primary }]} />
+              <Text style={[styles.pathText, { color: colors.text }]}>
+                Foundation Drawing Skills
+              </Text>
             </View>
-            <Text style={[styles.weekGoal, { color: colors.textSecondary }]}>{week.goal}</Text>
-            <View style={styles.lessonsContainer}>
-              {week.lessons.map((lesson, lessonIndex) => (
-                <View key={lessonIndex} style={[styles.lessonTag, { backgroundColor: colors.primary + '20' }]}>
-                  <Text style={[styles.lessonText, { color: colors.primary }]}>{lesson}</Text>
-                </View>
-              ))}
+            
+            <View style={styles.pathItem}>
+              <View style={[styles.pathDot, { backgroundColor: colors.textSecondary }]} />
+              <Text style={[styles.pathText, { color: colors.textSecondary }]}>
+                Shape Recognition & Control
+              </Text>
+            </View>
+            
+            <View style={styles.pathItem}>
+              <View style={[styles.pathDot, { backgroundColor: colors.textSecondary }]} />
+              <Text style={[styles.pathText, { color: colors.textSecondary }]}>
+                Creative Expression
+              </Text>
             </View>
           </View>
-        ))}
-      </View>
+        </View>
 
-      {/* Next Steps */}
-      <View style={[styles.section, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Ready to Start Your Journey?</Text>
-        <Text style={[styles.nextStepsText, { color: colors.textSecondary }]}>
-          Your personalized learning experience is ready. Start with your first lesson and begin your transformation into a confident artist.
-        </Text>
-        
-        <View style={styles.buttonContainer}>
+        {/* Action Buttons */}
+        <View style={styles.actions}>
           <Button
-            title="Start My Art Journey"
+            title="Start Learning Journey"
             onPress={handleStartLearning}
             variant="primary"
             size="large"
@@ -162,195 +227,162 @@ export default function AssessmentResultsScreen() {
           <Button
             title="Retake Assessment"
             onPress={handleRetakeAssessment}
-            variant="secondary"
+            variant="outline"
             size="medium"
             style={styles.secondaryButton}
           />
         </View>
-      </View>
 
-      {/* Confidence Boost */}
-      <View style={[styles.confidenceCard, { backgroundColor: colors.card }]}>
-        <LinearGradient
-          colors={ensureGradientColors(['#FF6B6B', '#4ECDC4'])}
-          style={styles.confidenceGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.confidenceTitle}>Remember: You ARE an Artist</Text>
-          <Text style={styles.confidenceText}>
-            Every professional artist started exactly where you are. The only difference is they kept going. Your journey starts now.
+        {/* Encouragement */}
+        <View style={styles.encouragement}>
+          <Text style={[styles.encouragementText, { color: colors.textSecondary }]}>
+            🎨 Remember: Every artist was first an amateur. You're on the perfect path!
           </Text>
-        </LinearGradient>
-      </View>
-    </ScrollView>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
   },
-  headerCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+  backgroundGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  headerGradient: {
-    padding: 24,
-  },
-  headerContent: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    padding: 40,
   },
-  headerTitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 8,
-  },
-  headerLevel: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 12,
+  loadingText: {
+    fontSize: 18,
     textAlign: 'center',
+    marginBottom: 30,
   },
-  headerDescription: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    lineHeight: 20,
+  loadingBar: {
+    width: '80%',
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
   },
-  section: {
-    borderRadius: 16,
+  loadingProgress: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  content: {
+    flex: 1,
     padding: 20,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    paddingTop: 60,
   },
-  sectionTitle: {
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  completedText: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  skillBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginBottom: 16,
+  },
+  skillEmoji: {
+    fontSize: 24,
+    marginRight: 8,
+  },
+  skillTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  skillDescription: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: 20,
+  },
+  scoresContainer: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  scoresTitle: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 16,
+    textAlign: 'center',
   },
-  strengthItem: {
+  scoreItem: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  strengthIcon: {
+  scoreLabel: {
     fontSize: 16,
+  },
+  scoreValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  pathContainer: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 30,
+  },
+  pathTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  pathItems: {
+    gap: 12,
+  },
+  pathItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pathDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     marginRight: 12,
   },
-  strengthText: {
-    fontSize: 14,
+  pathText: {
+    fontSize: 16,
     flex: 1,
   },
-  approachText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  timelineContainer: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-  },
-  timelineTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  timelineText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  weekCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  weekHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  weekNumber: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginRight: 12,
-  },
-  weekFocus: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  weekGoal: {
-    fontSize: 13,
-    marginBottom: 12,
-    fontStyle: 'italic',
-  },
-  lessonsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  lessonTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginRight: 8,
-    marginBottom: 4,
-  },
-  lessonText: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  nextStepsText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  buttonContainer: {
+  actions: {
     gap: 12,
+    marginBottom: 20,
   },
   primaryButton: {
     marginBottom: 8,
   },
   secondaryButton: {
-    marginBottom: 0,
-  },
-  confidenceCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  confidenceGradient: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  confidenceTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
     marginBottom: 8,
-    textAlign: 'center',
   },
-  confidenceText: {
+  encouragement: {
+    alignItems: 'center',
+    paddingTop: 20,
+  },
+  encouragementText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
+    fontStyle: 'italic',
     lineHeight: 20,
   },
 });

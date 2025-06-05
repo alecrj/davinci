@@ -1,5 +1,6 @@
+// src/components/drawing/DrawAnythingCanvas.tsx - FIXED STYLE PROP INTERFACE
 import React, { useRef, useImperativeHandle, forwardRef, useState, useCallback } from 'react';
-import { View, ViewStyle } from 'react-native';
+import { View, StyleProp, ViewStyle } from 'react-native'; // ✅ FIXED: Import StyleProp
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
 import { useDrawing } from '@/context/DrawingContext';
@@ -7,13 +8,13 @@ import { detectShape } from '@/utils/drawing/shapeDetection';
 import { Point } from '@/types/drawing';
 
 export interface DrawAnythingCanvasProps {
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>; // ✅ FIXED: Changed from ViewStyle to StyleProp<ViewStyle>
   onShapeDetected?: (shape: string) => void;
-  onDrawingComplete?: (shape: any, drawing: any) => void; // ✅ FIXED: Added missing prop
+  onDrawingComplete?: (shape: any, drawing: any) => void;
   showGuides?: boolean;
   enableShapeDetection?: boolean;
-  width?: number;  // ✅ FIXED: Added missing props
-  height?: number; // ✅ FIXED: Added missing props
+  width?: number;
+  height?: number;
 }
 
 export interface DrawAnythingCanvasRef {
@@ -25,7 +26,7 @@ export const DrawAnythingCanvas = forwardRef<DrawAnythingCanvasRef, DrawAnything
   ({ 
     style, 
     onShapeDetected, 
-    onDrawingComplete, // ✅ FIXED: Added to destructure
+    onDrawingComplete,
     showGuides = false, 
     enableShapeDetection = true,
     width,
@@ -82,14 +83,12 @@ export const DrawAnythingCanvas = forwardRef<DrawAnythingCanvasRef, DrawAnything
         case State.CANCELLED:
           endDrawing();
           
-          // ✅ FIXED: Shape detection with proper Point array
           if (enableShapeDetection && currentStroke.length > 3) {
             const detectionResult = detectShape(currentStroke);
             if (detectionResult && onShapeDetected) {
               onShapeDetected(detectionResult.type);
             }
             
-            // ✅ FIXED: Call onDrawingComplete if provided
             if (onDrawingComplete) {
               onDrawingComplete(detectionResult?.type || 'unknown', {
                 path: currentStroke,

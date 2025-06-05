@@ -1,3 +1,4 @@
+// app/assessment/drawing-test.tsx - FIXED TIMER AND CONTEXT TYPES
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -21,8 +22,8 @@ interface DrawingExercise {
   title: string;
   instruction: string;
   targetShape: ShapeType;
-  timeLimit: number; // seconds
-  points: number; // max points for perfect execution
+  timeLimit: number;
+  points: number;
 }
 
 const exercises: DrawingExercise[] = [
@@ -69,8 +70,8 @@ export default function AssessmentDrawingTest() {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const timerAnim = useRef(new Animated.Value(1)).current;
   
-  // Timer
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // ✅ FIXED: Proper timer type
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef<number>(0);
   
   const currentExercise = exercises[currentExerciseIndex];
@@ -79,10 +80,10 @@ export default function AssessmentDrawingTest() {
   // Timer effect
   useEffect(() => {
     if (hasStarted && timeLeft > 0) {
+      // ✅ FIXED: Proper timer typing
       timerRef.current = setTimeout(() => {
         setTimeLeft(prev => prev - 1);
         
-        // Add urgency animation when time is low
         if (timeLeft <= 10) {
           Animated.sequence([
             Animated.timing(timerAnim, {
@@ -109,13 +110,11 @@ export default function AssessmentDrawingTest() {
     };
   }, [timeLeft, hasStarted]);
   
-  // Reset timer when exercise changes
   useEffect(() => {
     setTimeLeft(currentExercise.timeLimit);
     setHasStarted(false);
     setIsDrawing(false);
     
-    // Slide in animation
     slideAnim.setValue(30);
     fadeAnim.setValue(0.7);
     
@@ -157,12 +156,10 @@ export default function AssessmentDrawingTest() {
     
     setExerciseResults(prev => [...prev, exerciseResult]);
     
-    // Clear timer
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
     
-    // Move to next exercise or complete assessment
     setTimeout(() => {
       if (isLastExercise) {
         completeAssessment([...exerciseResults, exerciseResult]);
@@ -176,7 +173,6 @@ export default function AssessmentDrawingTest() {
     if (detected === target) return 1.0;
     if (detected === null) return 0.0;
     
-    // Partial credit for related shapes
     const shapeGroups = {
       'circle': ['circle'],
       'square': ['square', 'triangle'],
@@ -188,14 +184,13 @@ export default function AssessmentDrawingTest() {
     );
     
     if (targetGroup && targetGroup[1].includes(detected)) {
-      return 0.5; // Partial credit
+      return 0.5;
     }
     
     return 0.0;
   };
   
   const completeAssessment = async (allResults: typeof exerciseResults) => {
-    // Calculate total score from questions (0-20) and drawing exercises (0-4)
     const questionPoints = parseInt(questionScore || '0');
     const drawingPoints = allResults.reduce((sum, result) => 
       sum + (result.accuracy * exercises.find(e => e.id === result.exerciseId)!.points), 0
@@ -204,20 +199,19 @@ export default function AssessmentDrawingTest() {
     const totalScore = questionPoints + drawingPoints;
     const skillLevel = determineSkillLevel(totalScore);
     
-    // Update user progress
+    // ✅ FIXED: Use correct assessment results structure
     await updateProgress({
       hasCompletedAssessment: true,
       skillLevel,
       assessmentScore: totalScore,
-      assessmentResults: {
+      assessmentResults: [{
         questionScore: questionPoints,
         drawingScore: drawingPoints,
         totalScore,
         exercises: allResults,
-      },
+      }],
     });
     
-    // Navigate to main app
     router.replace('/(tabs)');
   };
   
@@ -233,7 +227,6 @@ export default function AssessmentDrawingTest() {
   
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Header with progress */}
       <View style={styles.header}>
         <View style={styles.progressContainer}>
           <View style={[styles.progressBackground, { backgroundColor: theme.border }]}>
@@ -252,7 +245,6 @@ export default function AssessmentDrawingTest() {
           </Text>
         </View>
         
-        {/* Timer */}
         <Animated.View
           style={[
             styles.timerContainer,
@@ -276,7 +268,6 @@ export default function AssessmentDrawingTest() {
         </Animated.View>
       </View>
       
-      {/* Exercise Content */}
       <Animated.View
         style={[
           styles.content,
@@ -324,7 +315,6 @@ export default function AssessmentDrawingTest() {
         )}
       </Animated.View>
       
-      {/* Skip button */}
       <View style={styles.bottomNav}>
         <Button
           title="Skip this exercise"

@@ -1,6 +1,8 @@
+// src/components/drawing/ApplePencilCanvas.tsx - FIXED GESTURE HANDLER IMPORTS
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Dimensions, Platform, PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native';
-import { State } from 'react-native-gesture-handler';
+import { View, StyleSheet, Dimensions, Platform } from 'react-native';
+// ✅ FIXED: Import from react-native-gesture-handler instead of react-native
+import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
 import { Text } from '@/components/Themed';
 import { useTheme } from '@/context/ThemeContext';

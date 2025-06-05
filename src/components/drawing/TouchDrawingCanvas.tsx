@@ -1,96 +1,131 @@
-// components/TouchDrawingCanvas.tsx
-import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Dimensions, ViewStyle } from 'react-native';
-import { PanGestureHandler, State, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler'; // ✅ FIXED IMPORTS
+// src/components/drawing/TouchDrawingCanvas.tsx - FIXED STYLE PROP INTERFACE
+import React, { useState, useCallback } from 'react';
+import { View, StyleProp, ViewStyle } from 'react-native'; // ✅ FIXED: Import StyleProp
+import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
+import { useTheme } from '@/context/ThemeContext';
 import { Point } from '@/types/drawing';
 
-interface TouchDrawingCanvasProps {
-  style?: ViewStyle;
-  strokeColor?: string;
-  strokeWidth?: number;
+export interface TouchDrawingCanvasProps {
+  style?: StyleProp<ViewStyle>; // ✅ FIXED: Changed from ViewStyle to StyleProp<ViewStyle>
   onDrawingComplete?: (path: Point[]) => void;
+  strokeWidth?: number;
+  strokeColor?: string;
+  backgroundColor?: string;
 }
 
-// ✅ PROPER DEFAULT EXPORT
-const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
+export const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
   style,
-  strokeColor = '#007AFF',
-  strokeWidth = 3,
   onDrawingComplete,
+  strokeWidth = 3,
+  strokeColor,
+  backgroundColor = 'transparent',
 }) => {
-  const [paths, setPaths] = useState<Point[][]>([]);
+  const { theme } = useTheme();
+  const { colors } = theme;
+  
   const [currentPath, setCurrentPath] = useState<Point[]>([]);
+  const [completedPaths, setCompletedPaths] = useState<Point[][]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  const handleGestureEvent = (event: PanGestureHandlerGestureEvent) => {
-    const { x, y } = event.nativeEvent;
-    const point: Point = { x, y };
+  const handleGestureEvent = useCallback((event: PanGestureHandlerGestureEvent) => {
+    if (!isDrawing) return;
+    
+    const { absoluteX, absoluteY } = event.nativeEvent;
+    
+    const point: Point = {
+      x: absoluteX,
+      y: absoluteY,
+    };
 
-    if (isDrawing) {
-      setCurrentPath(prev => [...prev, point]);
+    setCurrentPath(prev => [...prev, point]);
+  }, [isDrawing]);
+
+  const handleStateChange = useCallback((event: PanGestureHandlerGestureEvent) => {
+    const { state, absoluteX, absoluteY } = event.nativeEvent;
+    
+    switch (state) {
+      case State.BEGAN:
+        setIsDrawing(true);
+        const startPoint: Point = { x: absoluteX, y: absoluteY };
+        setCurrentPath([startPoint]);
+        break;
+        
+      case State.END:
+      case State.CANCELLED:
+        setIsDrawing(false);
+        
+        if (currentPath.length > 1) {
+          setCompletedPaths(prev => [...prev, currentPath]);
+          onDrawingComplete?.(currentPath);
+        }
+        
+        setCurrentPath([]);
+        break;
     }
-  };
+  }, [currentPath, onDrawingComplete]);
 
-  const handleStateChange = (event: any) => {
-    const { state } = event.nativeEvent;
-
-    if (state === State.BEGAN) {
-      const { x, y } = event.nativeEvent;
-      const point: Point = { x, y };
-      setCurrentPath([point]);
-      setIsDrawing(true);
-    } else if (state === State.END || state === State.CANCELLED) {
-      if (currentPath.length > 0) {
-        setPaths(prev => [...prev, currentPath]);
-        onDrawingComplete?.(currentPath);
-      }
-      setCurrentPath([]);
-      setIsDrawing(false);
-    }
-  };
-
-  const createPathData = (points: Point[]): string => {
+  const renderPath = (points: Point[]): string => {
     if (points.length < 2) return '';
     
-    let pathData = `M ${points[0].x} ${points[0].y}`;
+    let path = `M ${points[0].x} ${points[0].y}`;
+    
     for (let i = 1; i < points.length; i++) {
-      pathData += ` L ${points[i].x} ${points[i].y}`;
+      const point = points[i];
+      const prevPoint = points[i - 1];
+      
+      // Use quadratic curves for smoother lines
+      const cpx = (prevPoint.x + point.x) / 2;
+      const cpy = (prevPoint.y + point.y) / 2;
+      
+      if (i === 1) {
+        path += ` Q ${prevPoint.x} ${prevPoint.y} ${cpx} ${cpy}`;
+      } else {
+        path += ` T ${cpx} ${cpy}`;
+      }
     }
-    return pathData;
+    
+    return path;
   };
 
-  const { width, height } = Dimensions.get('window');
+  const clearCanvas = () => {
+    setCurrentPath([]);
+    setCompletedPaths([]);
+  };
 
   return (
     <PanGestureHandler
       onGestureEvent={handleGestureEvent}
       onHandlerStateChange={handleStateChange}
+      minPointers={1}
+      maxPointers={1}
     >
-      <View style={[styles.container, { width: width - 40, height: 400 }, style]}>
-        <Svg width="100%" height="100%">
+      <View style={[{ flex: 1, backgroundColor }, style]}>
+        <Svg style={{ flex: 1 }} width="100%" height="100%">
           {/* Render completed paths */}
-          {paths.map((path, index) => (
+          {completedPaths.map((path, index) => (
             <Path
               key={index}
-              d={createPathData(path)}
-              stroke={strokeColor}
+              d={renderPath(path)}
+              stroke={strokeColor || colors.primary}
               strokeWidth={strokeWidth}
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
+              opacity={0.9}
             />
           ))}
           
-          {/* Render current drawing path */}
+          {/* Render current path */}
           {currentPath.length > 1 && (
             <Path
-              d={createPathData(currentPath)}
-              stroke={strokeColor}
+              d={renderPath(currentPath)}
+              stroke={strokeColor || colors.primary}
               strokeWidth={strokeWidth}
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
+              opacity={0.7}
             />
           )}
         </Svg>
@@ -99,14 +134,4 @@ const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: 'transparent',
-    borderRadius: 12,
-  },
-});
-
-export default TouchDrawingCanvas; // ✅ PROPER DEFAULT EXPORT
-
-// ✅ ALSO PROVIDE NAMED EXPORT FOR COMPATIBILITY
-export { TouchDrawingCanvas };
+export default TouchDrawingCanvas;
