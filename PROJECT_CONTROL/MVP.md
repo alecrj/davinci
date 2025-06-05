@@ -104,28 +104,62 @@ Advanced Features:
 - Background generation: focus on subject, AI creates gorgeous environments
 ```
 
-#### **📚 Learning System (Duolingo DNA)**
+#### **📱 Daily Art Addiction Experience (Post-Onboarding Retention)**
 ```yaml
-Lesson Experience Architecture:
-- 90-second micro-lessons ending with "I can't believe I created that!"
-- Split-screen iPad magic: tutorial video left, personal canvas right
-- AI coach providing real-time encouragement: "Beautiful line! Try a curved one next."
-- Every lesson builds confidence before building skill
-- Progressive skill unlocking maintaining momentum and achievement
+Home Dashboard (Identity-Driven Activation):
+Morning Experience:
+- "Good morning, Artist! 🎨" (identity reinforcement, never "user")
+- "Day 47 of your artistic journey 🔥" (meaningful streak with emotional attachment)
+- Portfolio preview: "47 artworks created - look how far you've come!"
+- Today's mission card: "3-minute sunset magic" with gorgeous result preview
+- Progress visualization: "Level 12 Artist - Landscape Master path 67% complete"
+- One giant "Create Today's Art" button (frictionless activation)
 
-Skill Tree Progression:
-- "Confidence Builder" path: Guaranteed success building artistic identity
-- "Style Explorer" path: Try different artistic movements safely
-- "Professional Pathway" path: Systematic skill building toward mastery
-- "Social Artist" path: Community challenges and collaborative creation
-- Each path contains 200+ lessons enabling years of growth
+Duolingo-Level Psychology Integration:
+Streak Anxiety (Fear + Pride):
+- "47 days of creating art" (not just "using app")
+- Streak protection: "Freeze your streak while traveling"
+- Emotional attachment: "Don't break your artistic journey"
+- Gentle reminders: "Your canvas is waiting" (not "you missed a day")
 
-Achievement Psychology System:
-- XP points making artistic progress feel like gaming achievement
-- Streak tracking with artistic milestone celebrations
-- Badge system: "First Circle", "Color Master", "Style Explorer", "Community Leader"
-- Portfolio growth visualization showing dramatic improvement over time
-- "Then vs Now" comparison features demonstrating transformation
+Micro-Achievement Momentum:
+- "3-minute magic" sessions feeling completely achievable
+- Every session guaranteed beautiful result for portfolio
+- XP progression: "Level 12 Artist" feeling prestigious and meaningful
+- Technique unlocks: "New watercolor brush earned!" creating anticipation
+
+Social Connection (Encouragement Only):
+- Daily challenges: "2,847 artists joined today's sunset challenge"
+- Positive sharing: "Your friend Sarah shared something beautiful!"
+- Success inspiration: "Amazing transformation by @user123"
+- Motivational quotes: "Every artist was first an amateur" - Emerson
+
+Visual Progress Reinforcement:
+- Before/after slider: "Day 1 circle vs yesterday's masterpiece"
+- Portfolio growth: Swipe through artistic journey showing dramatic improvement
+- Skill tree advancement: Clear visual progression through artistic competency
+- Achievement gallery: Badges and milestones celebrating creative courage
+
+Lesson Experience (3-5 Minutes):
+Split-Screen iPad Excellence:
+- Left: "Watch me paint this sunset" (30-second inspiring demonstration)
+- Right: Personal canvas with gentle AI guidance overlay
+- Bottom: Encouraging AI coach: "Beautiful! Try adding orange highlights here"
+- Progress bar: "2 minutes left - you're creating something amazing!"
+
+Completion Celebration:
+- AI enhancement reveal: User's sunset becomes gorgeously refined
+- "Day 47 complete! Your artistic streak continues!" (achievement reinforcement)
+- Portfolio addition: "47 artworks and counting!" (progress celebration)
+- Tomorrow preview: "Tomorrow: Learn magical star techniques" (anticipation building)
+- Social sharing: "Share your sunset masterpiece?" (viral potential)
+
+Evening Engagement (Optional Extension):
+- "Feeling creative? Try tonight's free-draw challenge"
+- Community gallery: "See what artists created today" (inspiration)
+- Portfolio review: "Swipe through your artistic journey" (progress appreciation)
+- Learning library: "Explore advanced techniques" (skill advancement)
+- Gentle reminder (8 PM): "Your sunset is waiting, Artist. 3 minutes to keep your streak! 🌅"
 ```
 
 #### **👥 Social & Community (Revolutionary Connection)**
