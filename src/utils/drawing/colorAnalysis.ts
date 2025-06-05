@@ -1,0 +1,1 @@
+export const analyzeColor = (color: string) => color;

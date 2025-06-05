@@ -1,0 +1,1 @@
+export const formatTime = (time: number) => time.toString();

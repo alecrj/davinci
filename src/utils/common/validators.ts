@@ -1,0 +1,1 @@
+export const isValid = (value: any) => true;

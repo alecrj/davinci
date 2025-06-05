@@ -1,8 +1,9 @@
-// src/components/drawing/CircleChallenge.tsx - FIXED STYLE ARRAY TYPES
+// src/components/drawing/CircleChallenge.tsx - FIXED CIRCULAR DEPENDENCY
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, Animated, StyleProp, ViewStyle } from 'react-native';
 import { Text } from '@/components/Themed';
-import { TouchDrawingCanvas, MagicTransformation } from '@/components/drawing';
+import { TouchDrawingCanvas } from './TouchDrawingCanvas'; // ✅ FIXED: Direct import to avoid circular dependency
+import { MagicTransformation } from './MagicTransformation'; // ✅ FIXED: Direct import to avoid circular dependency
 import { Button } from '@/components/ui';
 import { useTheme } from '@/context/ThemeContext';
 import { uiHaptics } from '@/utils/haptics';
@@ -159,7 +160,7 @@ export const CircleChallenge: React.FC<CircleChallengeProps> = ({ onComplete }) 
         
         <TouchDrawingCanvas
           onDrawingComplete={handleDrawingComplete}
-          style={canvasStyle} // ✅ FIXED: Proper style prop
+          style={canvasStyle}
         />
       </View>
 

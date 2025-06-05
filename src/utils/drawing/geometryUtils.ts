@@ -1,0 +1,1 @@
+export const calculateDistance = (p1: any, p2: any) => 0;

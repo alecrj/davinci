@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/utils/platform/useColorScheme';
 import { ThemeProvider as CustomThemeProvider } from '@/context/ThemeContext';
 import { UserProgressProvider } from '@/context/UserProgressContext';
+import { DrawingProvider } from '@/context/DrawingContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -51,17 +52,23 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
   return (
-    <CustomThemeProvider>
-      <UserProgressProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-          </Stack>
-        </ThemeProvider>
-      </UserProgressProvider>
-    </CustomThemeProvider>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <CustomThemeProvider>
+        <UserProgressProvider>
+          <DrawingProvider>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+              <Stack.Screen name="assessment" options={{ headerShown: false }} />
+              <Stack.Screen name="lessons" options={{ headerShown: false }} />
+              <Stack.Screen name="social" options={{ headerShown: false }} />
+              <Stack.Screen name="subscription" options={{ headerShown: false }} />
+              <Stack.Screen name="admin" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+            </Stack>
+          </DrawingProvider>
+        </UserProgressProvider>
+      </CustomThemeProvider>
+    </ThemeProvider>
   );
 }
