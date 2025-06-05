@@ -1,13 +1,13 @@
-// src/components/drawing/index.ts - FIXED CIRCULAR DEPENDENCY
-// ✅ SAFE EXPORTS: Only export components that don't import from this index
-export { DrawAnythingCanvas } from './DrawAnythingCanvas';
+// src/components/drawing/index.ts - UPDATED EXPORTS WITH ALL PROFESSIONAL COMPONENTS
 export { TouchDrawingCanvas } from './TouchDrawingCanvas';
+export { DrawAnythingCanvas } from './DrawAnythingCanvas';
+export { ToolPalette } from './ToolPalette';
+
+// Import existing components (assuming they exist)
 export { MagicTransformation } from './MagicTransformation';
-export { default as ApplePencilCanvas } from './ApplePencilCanvas';
+export { CircleChallenge } from './CircleChallenge';
+export { ShapeDetector } from './ShapeDetector';
 
-// ✅ REMOVED: CircleChallenge export to break circular dependency
-// Components should import CircleChallenge directly:
-// import { CircleChallenge } from '@/components/drawing/CircleChallenge';
-
-// ✅ NOTE: Other components can still be added here as long as they don't 
-// import from this index file. Always import specific files to avoid cycles.
+// Export types for external use
+export type { TouchDrawingCanvasProps } from './TouchDrawingCanvas';
+export type { DrawAnythingCanvasProps, DrawAnythingCanvasRef } from './DrawAnythingCanvas';

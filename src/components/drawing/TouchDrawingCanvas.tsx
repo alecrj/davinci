@@ -1,17 +1,24 @@
-// src/components/drawing/TouchDrawingCanvas.tsx - FIXED STYLE PROP INTERFACE
-import React, { useState, useCallback } from 'react';
-import { View, StyleProp, ViewStyle } from 'react-native'; // ✅ FIXED: Import StyleProp
+// src/components/drawing/TouchDrawingCanvas.tsx - COORDINATE ALIGNMENT FIXED
+import React, { useState, useCallback, useRef } from 'react';
+import { View, StyleProp, ViewStyle, LayoutChangeEvent } from 'react-native';
 import { PanGestureHandler, PanGestureHandlerGestureEvent, State } from 'react-native-gesture-handler';
 import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '@/context/ThemeContext';
 import { Point } from '@/types/drawing';
 
 export interface TouchDrawingCanvasProps {
-  style?: StyleProp<ViewStyle>; // ✅ FIXED: Changed from ViewStyle to StyleProp<ViewStyle>
+  style?: StyleProp<ViewStyle>;
   onDrawingComplete?: (path: Point[]) => void;
   strokeWidth?: number;
   strokeColor?: string;
   backgroundColor?: string;
+}
+
+interface CanvasLayout {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
@@ -27,19 +34,42 @@ export const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
   const [currentPath, setCurrentPath] = useState<Point[]>([]);
   const [completedPaths, setCompletedPaths] = useState<Point[][]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [canvasLayout, setCanvasLayout] = useState<CanvasLayout>({ x: 0, y: 0, width: 0, height: 0 });
+
+  // ✅ FIXED: Convert screen coordinates to canvas-relative coordinates
+  const screenToCanvasCoordinates = useCallback((absoluteX: number, absoluteY: number): Point => {
+    return {
+      x: absoluteX - canvasLayout.x,
+      y: absoluteY - canvasLayout.y,
+    };
+  }, [canvasLayout]);
+
+  // ✅ FIXED: Handle canvas layout changes
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    event.target.measure((x, y, width, height, pageX, pageY) => {
+      setCanvasLayout({
+        x: pageX,
+        y: pageY,
+        width,
+        height,
+      });
+    });
+  }, []);
 
   const handleGestureEvent = useCallback((event: PanGestureHandlerGestureEvent) => {
     if (!isDrawing) return;
     
     const { absoluteX, absoluteY } = event.nativeEvent;
     
-    const point: Point = {
-      x: absoluteX,
-      y: absoluteY,
-    };
+    // ✅ FIXED: Convert to canvas coordinates
+    const canvasPoint = screenToCanvasCoordinates(absoluteX, absoluteY);
 
-    setCurrentPath(prev => [...prev, point]);
-  }, [isDrawing]);
+    // ✅ FIXED: Ensure coordinates are within canvas bounds
+    if (canvasPoint.x >= 0 && canvasPoint.x <= canvasLayout.width &&
+        canvasPoint.y >= 0 && canvasPoint.y <= canvasLayout.height) {
+      setCurrentPath(prev => [...prev, canvasPoint]);
+    }
+  }, [isDrawing, screenToCanvasCoordinates, canvasLayout]);
 
   const handleStateChange = useCallback((event: PanGestureHandlerGestureEvent) => {
     const { state, absoluteX, absoluteY } = event.nativeEvent;
@@ -47,7 +77,8 @@ export const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
     switch (state) {
       case State.BEGAN:
         setIsDrawing(true);
-        const startPoint: Point = { x: absoluteX, y: absoluteY };
+        // ✅ FIXED: Convert to canvas coordinates for start point
+        const startPoint = screenToCanvasCoordinates(absoluteX, absoluteY);
         setCurrentPath([startPoint]);
         break;
         
@@ -63,9 +94,10 @@ export const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
         setCurrentPath([]);
         break;
     }
-  }, [currentPath, onDrawingComplete]);
+  }, [currentPath, onDrawingComplete, screenToCanvasCoordinates]);
 
-  const renderPath = (points: Point[]): string => {
+  // ✅ OPTIMIZED: Smooth path rendering with quadratic curves
+  const renderPath = useCallback((points: Point[]): string => {
     if (points.length < 2) return '';
     
     let path = `M ${points[0].x} ${points[0].y}`;
@@ -86,12 +118,12 @@ export const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
     }
     
     return path;
-  };
+  }, []);
 
-  const clearCanvas = () => {
+  const clearCanvas = useCallback(() => {
     setCurrentPath([]);
     setCompletedPaths([]);
-  };
+  }, []);
 
   return (
     <PanGestureHandler
@@ -100,8 +132,17 @@ export const TouchDrawingCanvas: React.FC<TouchDrawingCanvasProps> = ({
       minPointers={1}
       maxPointers={1}
     >
-      <View style={[{ flex: 1, backgroundColor }, style]}>
-        <Svg style={{ flex: 1 }} width="100%" height="100%">
+      <View 
+        style={[{ flex: 1, backgroundColor }, style]} 
+        onLayout={handleLayout}
+      >
+        {/* ✅ FIXED: SVG with explicit dimensions matching canvas */}
+        <Svg 
+          style={{ flex: 1 }} 
+          width={canvasLayout.width || "100%"} 
+          height={canvasLayout.height || "100%"}
+          viewBox={`0 0 ${canvasLayout.width || 300} ${canvasLayout.height || 400}`}
+        >
           {/* Render completed paths */}
           {completedPaths.map((path, index) => (
             <Path
